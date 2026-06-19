@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "dubsight",
+  "productName": "Dubsight",
   "version": "0.1.0",
   "identifier": "fr.dubsinho.dubsight",
   "build": {
@@ -12,9 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "dubsight",
-        "width": 800,
-        "height": 600
+        "title": "Dubsight",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 360,
+        "minHeight": 640,
+        "decorations": false
       }
     ],
     "security": {
