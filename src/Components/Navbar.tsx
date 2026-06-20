@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { isTauri } from "../lib/api";
+import { useTranslation } from "react-i18next";
 import {
   ContainersIcon,
   ImagesIcon,
@@ -13,11 +13,11 @@ import {
 export type Page = "containers" | "settings";
 
 const navItems = [
-  { label: "Conteneurs", icon: ContainersIcon, page: "containers" as const },
-  { label: "Images", icon: ImagesIcon, page: null },
-  { label: "Volumes", icon: VolumesIcon, page: null },
-  { label: "Réseaux", icon: NetworksIcon, page: null },
-  { label: "Logs", icon: LogsIcon, page: null },
+  { labelKey: "nav.containers", icon: ContainersIcon, page: "containers" as const },
+  { labelKey: "nav.images", icon: ImagesIcon, page: null },
+  { labelKey: "nav.volumes", icon: VolumesIcon, page: null },
+  { labelKey: "nav.networks", icon: NetworksIcon, page: null },
+  { labelKey: "nav.logs", icon: LogsIcon, page: null },
 ];
 
 type NavbarProps = {
@@ -26,6 +26,7 @@ type NavbarProps = {
 };
 
 export default function Navbar({ page, onNavigate }: NavbarProps) {
+  const { t } = useTranslation();
   const listRef = useRef<HTMLUListElement>(null);
   const [hasScrollbar, setHasScrollbar] = useState(false);
 
@@ -55,10 +56,11 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
         </div>
 
         <ul ref={listRef} className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
-          {navItems.map(({ label, icon: Icon, page: itemPage }, index) => {
+          {navItems.map(({ labelKey, icon: Icon, page: itemPage }, index) => {
             const active = itemPage !== null && itemPage === page;
+            const label = t(labelKey);
             return (
-              <li key={`${label}-${index}`}>
+              <li key={`${labelKey}-${index}`}>
                 <button
                   type="button"
                   title={label}
@@ -75,7 +77,7 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
                     <span>{label}</span>
                     {itemPage === null && (
                       <span className="text-[10px] uppercase tracking-wide text-paper/35 bg-white/5 rounded-full px-2 py-0.5 shrink-0">
-                        Bientôt
+                        {t("nav.soon")}
                       </span>
                     )}
                   </span>
@@ -86,21 +88,19 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
         </ul>
 
         <div className="px-3 py-4 border-t border-white/10">
-          {isTauri && (
-            <button
-              type="button"
-              title="Paramètres"
-              onClick={() => onNavigate("settings")}
-              className={`sidebar-link ${
-                page === "settings" ? "bg-accent-600 text-paper" : "text-paper/55 cursor-pointer"
-              }`}
-            >
-              <span className="sidebar-icon">
-                <SettingsIcon className="h-5 w-5 shrink-0" />
-              </span>
-              <span className="sidebar-fade">Paramètres</span>
-            </button>
-          )}
+          <button
+            type="button"
+            title={t("nav.settings")}
+            onClick={() => onNavigate("settings")}
+            className={`sidebar-link ${
+              page === "settings" ? "bg-accent-600 text-paper" : "text-paper/55 cursor-pointer"
+            }`}
+          >
+            <span className="sidebar-icon">
+              <SettingsIcon className="h-5 w-5 shrink-0" />
+            </span>
+            <span className="sidebar-fade">{t("nav.settings")}</span>
+          </button>
           <p className="sidebar-fade px-3 pt-2 text-[11px] text-paper/35">
             v{import.meta.env.VITE_APP_VERSION}
           </p>

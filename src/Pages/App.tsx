@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "./App.css";
 import Content from "../Components/Content";
 import LoginScreen from "../Components/LoginScreen";
@@ -8,6 +9,7 @@ import Titlebar from "../Components/Titlebar";
 import { checkSession, isTauri } from "../lib/api";
 
 export default function App() {
+  const { t } = useTranslation();
   const [page, setPage] = useState<Page>("containers");
 
   // En mode desktop (Tauri), pas d'auth du tout. En mode web, l'app reste
@@ -33,7 +35,7 @@ export default function App() {
   if (!isTauri && checkingSession) {
     return (
       <main className="h-screen flex items-center justify-center bg-anthracite-950 text-sm text-paper/50">
-        Chargement…
+        {t("app.loading")}
       </main>
     );
   }

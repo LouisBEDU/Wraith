@@ -1,0 +1,86 @@
+{
+  "common": {
+    "loading": "Chargement…",
+    "cancel": "Annuler",
+    "confirm": "Confirmer"
+  },
+  "nav": {
+    "containers": "Conteneurs",
+    "images": "Images",
+    "volumes": "Volumes",
+    "networks": "Réseaux",
+    "logs": "Logs",
+    "soon": "Bientôt",
+    "settings": "Paramètres"
+  },
+  "content": {
+    "title": "Conteneurs",
+    "subtitle": "Visualisez et gérez vos conteneurs Docker.",
+    "refresh": "Actualiser",
+    "removeTitle": "Supprimer le conteneur ?",
+    "removeDescription": "Le conteneur « {{name}} » sera définitivement supprimé.",
+    "removeConfirm": "Supprimer"
+  },
+  "table": {
+    "empty": "Aucun conteneur chargé. Cliquez sur « Actualiser ».",
+    "name": "Nom",
+    "image": "Image",
+    "status": "Statut",
+    "ports": "Ports",
+    "actions": "Actions",
+    "start": "Démarrer",
+    "stop": "Arrêter",
+    "restart": "Redémarrer",
+    "remove": "Supprimer"
+  },
+  "status": {
+    "running": "En cours",
+    "exited": "Arrêté",
+    "created": "Créé",
+    "paused": "En pause",
+    "restarting": "Redémarre",
+    "removing": "Suppression",
+    "dead": "Mort"
+  },
+  "stats": {
+    "containers": "Conteneurs",
+    "running": "En cours",
+    "stopped": "Arrêtés"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Configure l'accès web à Wraith.",
+    "webOnlyDesktop": "Les paramètres ne sont modifiables que depuis l'app desktop Wraith, pas depuis cet accès web.",
+    "loading": "Chargement…",
+    "language": "Langue",
+    "languageFrench": "Français",
+    "languageEnglish": "English",
+    "webAccess": "Accès web",
+    "webAccessDescription": "Expose Wraith sur le réseau pour le piloter depuis un navigateur, en plus de l'app desktop.",
+    "port": "Port",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Laisser vide = accès libre (déconseillé hors localhost)",
+    "passwordHint": "Demandé via l'écran de connexion Wraith au premier accès depuis le navigateur.",
+    "networkHint": "Accessible depuis le réseau à l'adresse",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré."
+  },
+  "login": {
+    "appName": "Wraith",
+    "subtitle": "Accès web protégé. Entre le mot de passe pour continuer.",
+    "password": "Mot de passe",
+    "wrongPassword": "Mot de passe incorrect.",
+    "serverError": "Impossible de contacter le serveur.",
+    "connecting": "Connexion…",
+    "submit": "Se connecter"
+  },
+  "titlebar": {
+    "minimize": "Réduire",
+    "maximize": "Agrandir",
+    "close": "Fermer"
+  },
+  "app": {
+    "loading": "Chargement…"
+  }
+}

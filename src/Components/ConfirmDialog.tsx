@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -15,13 +16,17 @@ export default function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Confirmer",
-  cancelLabel = "Annuler",
+  confirmLabel,
+  cancelLabel,
   danger = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   if (!open) return null;
+
+  const resolvedConfirm = confirmLabel ?? t("common.confirm");
+  const resolvedCancel = cancelLabel ?? t("common.cancel");
 
   return (
     <div
@@ -41,7 +46,7 @@ export default function ConfirmDialog({
 
         <div className="flex items-center justify-end gap-2">
           <button type="button" className="btn btn-ghost" onClick={onCancel}>
-            {cancelLabel}
+            {resolvedCancel}
           </button>
           <button
             type="button"
@@ -50,7 +55,7 @@ export default function ConfirmDialog({
             }`}
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {resolvedConfirm}
           </button>
         </div>
       </div>

@@ -17,8 +17,11 @@
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "cargo": "^0.8.0",
+    "i18next": "^24",
+    "i18next-browser-languagedetector": "^8",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-i18next": "^15",
     "tailwindcss": "^4.3.1"
   },
   "devDependencies": {

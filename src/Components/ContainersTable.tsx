@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { DockerContainer } from "../types/docker";
 import StatusBadge from "./StatusBadge";
 import { ContainersIcon, PlayIcon, RestartIcon, StopIcon, TrashIcon } from "./icons";
@@ -11,11 +12,13 @@ type ContainersTableProps = {
 };
 
 export default function ContainersTable({ containers, pendingId, onAction }: ContainersTableProps) {
+  const { t } = useTranslation();
+
   if (containers.length === 0) {
     return (
       <div className="card flex flex-col items-center justify-center gap-3 py-16 text-anthracite-400">
         <ContainersIcon className="h-9 w-9" />
-        <p className="text-sm">Aucun conteneur chargé. Cliquez sur « Actualiser ».</p>
+        <p className="text-sm">{t("table.empty")}</p>
       </div>
     );
   }
@@ -26,11 +29,11 @@ export default function ContainersTable({ containers, pendingId, onAction }: Con
         <table className="w-full min-w-160 text-sm">
           <thead>
             <tr className="bg-anthracite-50 text-left text-xs uppercase tracking-wide text-anthracite-500">
-              <th className="px-5 py-3 font-medium">Nom</th>
-              <th className="px-5 py-3 font-medium">Image</th>
-              <th className="px-5 py-3 font-medium">Statut</th>
-              <th className="hidden md:table-cell px-5 py-3 font-medium">Ports</th>
-              <th className="px-5 py-3 font-medium text-right">Actions</th>
+              <th className="px-5 py-3 font-medium">{t("table.name")}</th>
+              <th className="px-5 py-3 font-medium">{t("table.image")}</th>
+              <th className="px-5 py-3 font-medium">{t("table.status")}</th>
+              <th className="hidden md:table-cell px-5 py-3 font-medium">{t("table.ports")}</th>
+              <th className="px-5 py-3 font-medium text-right">{t("table.actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-anthracite-100">
@@ -50,7 +53,7 @@ export default function ContainersTable({ containers, pendingId, onAction }: Con
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
-                        title="Démarrer"
+                        title={t("table.start")}
                         className="icon-btn"
                         disabled={isRunning || isPending}
                         onClick={() => onAction(container, "start")}
@@ -59,7 +62,7 @@ export default function ContainersTable({ containers, pendingId, onAction }: Con
                       </button>
                       <button
                         type="button"
-                        title="Arrêter"
+                        title={t("table.stop")}
                         className="icon-btn"
                         disabled={!isRunning || isPending}
                         onClick={() => onAction(container, "stop")}
@@ -68,7 +71,7 @@ export default function ContainersTable({ containers, pendingId, onAction }: Con
                       </button>
                       <button
                         type="button"
-                        title="Redémarrer"
+                        title={t("table.restart")}
                         className="icon-btn"
                         disabled={isPending}
                         onClick={() => onAction(container, "restart")}
@@ -77,7 +80,7 @@ export default function ContainersTable({ containers, pendingId, onAction }: Con
                       </button>
                       <button
                         type="button"
-                        title="Supprimer"
+                        title={t("table.remove")}
                         className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
                         disabled={isPending}
                         onClick={() => onAction(container, "remove")}

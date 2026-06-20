@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { login } from "../lib/api";
 import { LogoIcon } from "./icons";
 
@@ -7,6 +8,7 @@ type LoginScreenProps = {
 };
 
 export default function LoginScreen({ onSuccess }: LoginScreenProps) {
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,10 +22,10 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
       if (ok) {
         onSuccess();
       } else {
-        setError("Mot de passe incorrect.");
+        setError(t("login.wrongPassword"));
       }
     } catch {
-      setError("Impossible de contacter le serveur.");
+      setError(t("login.serverError"));
     } finally {
       setLoading(false);
     }
@@ -37,14 +39,12 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
       >
         <div className="flex flex-col items-center gap-2 text-paper">
           <LogoIcon className="h-9 w-9 text-accent-400" />
-          <h1 className="text-base font-semibold">Wraith</h1>
-          <p className="text-sm text-paper/50 text-center">
-            Accès web protégé. Entre le mot de passe pour continuer.
-          </p>
+          <h1 className="text-base font-semibold">{t("login.appName")}</h1>
+          <p className="text-sm text-paper/50 text-center">{t("login.subtitle")}</p>
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-paper/80">Mot de passe</span>
+          <span className="text-sm font-medium text-paper/80">{t("login.password")}</span>
           <input
             type="password"
             autoFocus
@@ -62,7 +62,7 @@ export default function LoginScreen({ onSuccess }: LoginScreenProps) {
         )}
 
         <button type="submit" className="btn btn-primary w-full" disabled={loading}>
-          {loading ? "Connexion…" : "Se connecter"}
+          {loading ? t("login.connecting") : t("login.submit")}
         </button>
       </form>
     </main>

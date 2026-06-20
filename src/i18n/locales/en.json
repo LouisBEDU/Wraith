@@ -1,0 +1,86 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "nav": {
+    "containers": "Containers",
+    "images": "Images",
+    "volumes": "Volumes",
+    "networks": "Networks",
+    "logs": "Logs",
+    "soon": "Soon",
+    "settings": "Settings"
+  },
+  "content": {
+    "title": "Containers",
+    "subtitle": "View and manage your Docker containers.",
+    "refresh": "Refresh",
+    "removeTitle": "Remove this container?",
+    "removeDescription": "Container “{{name}}” will be permanently removed.",
+    "removeConfirm": "Remove"
+  },
+  "table": {
+    "empty": "No containers loaded. Click “Refresh”.",
+    "name": "Name",
+    "image": "Image",
+    "status": "Status",
+    "ports": "Ports",
+    "actions": "Actions",
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "remove": "Remove"
+  },
+  "status": {
+    "running": "Running",
+    "exited": "Stopped",
+    "created": "Created",
+    "paused": "Paused",
+    "restarting": "Restarting",
+    "removing": "Removing",
+    "dead": "Dead"
+  },
+  "stats": {
+    "containers": "Containers",
+    "running": "Running",
+    "stopped": "Stopped"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure web access to Wraith.",
+    "webOnlyDesktop": "Settings can only be changed from the Wraith desktop app, not from this web access.",
+    "loading": "Loading…",
+    "language": "Language",
+    "languageFrench": "Français",
+    "languageEnglish": "English",
+    "webAccess": "Web access",
+    "webAccessDescription": "Expose Wraith on the network to control it from a browser, in addition to the desktop app.",
+    "port": "Port",
+    "password": "Password",
+    "passwordPlaceholder": "Leave empty = open access (not recommended off localhost)",
+    "passwordHint": "Requested via the Wraith login screen on first browser access.",
+    "networkHint": "Accessible from the network at",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved."
+  },
+  "login": {
+    "appName": "Wraith",
+    "subtitle": "Protected web access. Enter the password to continue.",
+    "password": "Password",
+    "wrongPassword": "Incorrect password.",
+    "serverError": "Unable to reach the server.",
+    "connecting": "Connecting…",
+    "submit": "Log in"
+  },
+  "titlebar": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "close": "Close"
+  },
+  "app": {
+    "loading": "Loading…"
+  }
+}
