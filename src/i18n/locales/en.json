@@ -19,7 +19,12 @@
     "refresh": "Refresh",
     "removeTitle": "Remove this container?",
     "removeDescription": "Container “{{name}}” will be permanently removed.",
-    "removeConfirm": "Remove"
+    "removeConfirm": "Remove",
+    "toastRefreshed": "List refreshed.",
+    "toastStart": "Container “{{name}}” started.",
+    "toastStop": "Container “{{name}}” stopped.",
+    "toastRestart": "Container “{{name}}” restarted.",
+    "toastRemove": "Container “{{name}}” removed."
   },
   "table": {
     "empty": "No containers loaded. Click “Refresh”.",
@@ -55,16 +60,27 @@
     "language": "Language",
     "languageFrench": "Français",
     "languageEnglish": "English",
+    "runInBackground": "Run in background",
+    "runInBackgroundDescription": "Closing the window doesn't quit Wraith: the app stays in the system tray and the web server keeps running. Disable so closing the window fully quits the app.",
     "webAccess": "Web access",
     "webAccessDescription": "Expose Wraith on the network to control it from a browser, in addition to the desktop app.",
     "port": "Port",
     "password": "Password",
     "passwordPlaceholder": "Leave empty = open access (not recommended off localhost)",
+    "passwordPlaceholderSet": "Leave empty to keep the current password",
+    "passwordBadgeSet": "Protected",
+    "passwordBadgeUnset": "Open access",
+    "passwordClear": "Remove password (open access)",
     "passwordHint": "Requested via the Wraith login screen on first browser access.",
     "networkHint": "Accessible from the network at",
+    "showIp": "Show address",
+    "hideIp": "Hide address",
     "save": "Save",
     "saving": "Saving…",
-    "saved": "Saved."
+    "saved": "Saved.",
+    "toastSaved": "Settings saved.",
+    "toastSavedNoPassword": "Web access enabled without a password: reachable with no protection on the network.",
+    "toastPasswordRemoved": "Password removed: open access."
   },
   "login": {
     "appName": "Wraith",

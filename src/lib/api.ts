@@ -1,24 +1,24 @@
 import { invoke } from "@tauri-apps/api/core";
 
-/**
- * true si l'app tourne dans la vraie fenêtre desktop Tauri (où `invoke()`
- * fonctionne). false si elle est servie par le serveur web embarqué et
- * consultée depuis un navigateur classique — dans ce cas on passe par
- * fetch() vers l'API REST exposée par web_server.rs.
- */
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export type WebServerSettings = {
   enabled: boolean;
   port: number;
-  password: string;
+  has_password: boolean;
+  run_in_background: boolean;
+};
+
+export type WebServerSettingsInput = {
+  enabled: boolean;
+  port: number;
+  password: string | null;
+  run_in_background: boolean;
 };
 
 async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
   const res = await fetch(`/api${path}`, options);
   if (res.status === 401) {
-    // Session expirée ou jamais ouverte : on prévient l'app pour qu'elle
-    // réaffiche l'écran de connexion au lieu d'un message d'erreur brut.
     window.dispatchEvent(new Event("wraith:unauthorized"));
   }
   if (!res.ok) {
@@ -28,11 +28,6 @@ async function apiFetch(path: string, options?: RequestInit): Promise<Response> 
   return res;
 }
 
-// Si /api/* renvoie autre chose que du JSON (ex: la page index.html, parce
-// qu'on a ouvert le serveur de dev Vite (port 1420) dans un navigateur
-// classique au lieu de la vraie fenêtre Tauri ou du serveur web embarqué
-// sur 1825), `res.json()` plante avec un SyntaxError cryptique. On détecte
-// ce cas pour donner un message clair à la place.
 async function apiFetchJson<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await apiFetch(path, options);
   const text = await res.text();
@@ -77,26 +72,17 @@ export async function dockerAction(action: ContainerAction, id: string): Promise
   }
 }
 
-// Les paramètres du serveur web ne sont modifiables que depuis l'app
-// desktop (ça n'aurait pas de sens de les changer depuis le navigateur
-// qui dépend justement de ce serveur).
-
 export async function getWebServerSettings(): Promise<WebServerSettings> {
   return invoke<WebServerSettings>("get_web_server_settings");
 }
 
-export async function saveWebServerSettings(settings: WebServerSettings): Promise<void> {
+export async function saveWebServerSettings(settings: WebServerSettingsInput): Promise<void> {
   await invoke("save_web_server_settings", { settings });
 }
 
 export async function getLocalIp(): Promise<string> {
   return invoke<string>("get_local_ip");
 }
-
-// Authentification de l'accès web (mode navigateur uniquement). Le serveur
-// embarqué gère ça par cookie de session, pas par l'auth HTTP Basic
-// native du navigateur — ça permet un écran de connexion custom (joli) à
-// la place du popup natif (moche).
 
 export async function login(password: string): Promise<boolean> {
   const res = await fetch("/api/login", {

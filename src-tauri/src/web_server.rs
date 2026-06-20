@@ -9,7 +9,7 @@ use tiny_http::{Header, Method, Response, Server, StatusCode};
 #[derive(Default)]
 pub struct RuntimeConfig {
     pub enabled: bool,
-    pub password: String,
+    pub password_hash: String,
     pub sessions: HashSet<String>,
 }
 
@@ -124,7 +124,7 @@ fn session_token(request: &tiny_http::Request) -> Option<String> {
 
 fn is_authorized(request: &tiny_http::Request, config: &SharedConfig) -> bool {
     let cfg = config.lock().unwrap();
-    if cfg.password.is_empty() {
+    if cfg.password_hash.is_empty() {
         return true;
     }
     match session_token(request) {
@@ -190,7 +190,7 @@ fn handle_login(mut request: tiny_http::Request, config: &SharedConfig) {
         .unwrap_or_default();
 
     let mut cfg = config.lock().unwrap();
-    let ok = cfg.password.is_empty() || submitted == cfg.password;
+    let ok = crate::settings::verify_password(&cfg.password_hash, &submitted);
 
     if !ok {
         drop(cfg);

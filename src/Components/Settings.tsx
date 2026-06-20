@@ -7,18 +7,19 @@ import {
   saveWebServerSettings,
   type WebServerSettings,
 } from "../lib/api";
+import { useToast } from "../lib/toast";
+import { EyeIcon, EyeOffIcon, LockIcon, LockOpenIcon } from "./icons";
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
+  const toast = useToast();
   const [settings, setSettings] = useState<WebServerSettings | null>(null);
+  const [passwordInput, setPasswordInput] = useState("");
   const [localIp, setLocalIp] = useState<string | null>(null);
+  const [ipRevealed, setIpRevealed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
-  // Les paramètres ne sont modifiables que depuis l'app desktop : en mode
-  // web (servi par le serveur embarqué), invoke() n'existe pas.
   useEffect(() => {
     if (!isTauri) {
       setLoading(false);
@@ -33,7 +34,7 @@ export default function Settings() {
         setSettings(loaded);
         setLocalIp(ip);
       } catch (err) {
-        setError(String(err));
+        toast.error(String(err));
       } finally {
         setLoading(false);
       }
@@ -43,13 +44,46 @@ export default function Settings() {
   async function handleSave() {
     if (!settings) return;
     setSaving(true);
-    setError(null);
-    setSaved(false);
+    const settingNewPassword = passwordInput !== "";
+    const willHaveNoPassword = !settings.has_password && !settingNewPassword;
     try {
-      await saveWebServerSettings(settings);
-      setSaved(true);
+      await saveWebServerSettings({
+        enabled: settings.enabled,
+        port: settings.port,
+        run_in_background: settings.run_in_background,
+        password: settingNewPassword ? passwordInput : null,
+      });
+      if (settingNewPassword) {
+        setSettings({ ...settings, has_password: true });
+        setPasswordInput("");
+      }
+      if (settings.enabled && willHaveNoPassword) {
+        toast.warning(t("settings.toastSavedNoPassword"));
+      } else {
+        toast.success(t("settings.toastSaved"));
+      }
     } catch (err) {
-      setError(String(err));
+      toast.error(String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleClearPassword() {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      await saveWebServerSettings({
+        enabled: settings.enabled,
+        port: settings.port,
+        run_in_background: settings.run_in_background,
+        password: "",
+      });
+      setSettings({ ...settings, has_password: false });
+      setPasswordInput("");
+      toast.info(t("settings.toastPasswordRemoved"));
+    } catch (err) {
+      toast.error(String(err));
     } finally {
       setSaving(false);
     }
@@ -63,12 +97,6 @@ export default function Settings() {
         <h1 className="text-xl font-semibold text-anthracite-900">{t("settings.title")}</h1>
         <p className="text-sm text-anthracite-500 mt-0.5">{t("settings.subtitle")}</p>
       </div>
-
-      {error && (
-        <div className="rounded-xl border border-status-error/20 bg-status-error-soft text-status-error text-sm px-4 py-3 wrap-break-words">
-          {error}
-        </div>
-      )}
 
       <div className="card max-w-lg p-5 flex flex-col gap-3">
         <span className="text-sm font-medium text-anthracite-900">{t("settings.language")}</span>
@@ -90,6 +118,34 @@ export default function Settings() {
         <p className="text-sm text-anthracite-500">{t("settings.loading")}</p>
       ) : (
         <div className="card max-w-lg p-5 flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-anthracite-900">
+                {t("settings.runInBackground")}
+              </p>
+              <p className="text-sm text-anthracite-500 mt-0.5">
+                {t("settings.runInBackgroundDescription")}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.run_in_background}
+              onClick={() =>
+                setSettings({ ...settings, run_in_background: !settings.run_in_background })
+              }
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                settings.run_in_background ? "bg-accent-600" : "bg-anthracite-200"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  settings.run_in_background ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-anthracite-900">{t("settings.webAccess")}</p>
@@ -129,23 +185,63 @@ export default function Settings() {
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-anthracite-900">{t("settings.password")}</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium text-anthracite-900">{t("settings.password")}</span>
+              <span className={`badge ${settings.has_password ? "badge-running" : "badge-restarting"}`}>
+                {settings.has_password ? (
+                  <LockIcon className="h-3 w-3" />
+                ) : (
+                  <LockOpenIcon className="h-3 w-3" />
+                )}
+                {settings.has_password
+                  ? t("settings.passwordBadgeSet")
+                  : t("settings.passwordBadgeUnset")}
+              </span>
+            </div>
             <input
               type="password"
-              value={settings.password}
-              onChange={(e) => setSettings({ ...settings, password: e.target.value })}
-              placeholder={t("settings.passwordPlaceholder")}
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              placeholder={
+                settings.has_password
+                  ? t("settings.passwordPlaceholderSet")
+                  : t("settings.passwordPlaceholder")
+              }
               className="rounded-lg border border-anthracite-100 px-3 py-2 text-sm text-anthracite-900 focus:outline-none focus:ring-2 focus:ring-accent-500"
             />
             <span className="text-xs text-anthracite-400">{t("settings.passwordHint")}</span>
+            {settings.has_password && (
+              <button
+                type="button"
+                onClick={handleClearPassword}
+                disabled={saving}
+                className="self-start text-xs text-status-error hover:underline disabled:opacity-40"
+              >
+                {t("settings.passwordClear")}
+              </button>
+            )}
           </label>
 
           {settings.enabled && localIp && (
-            <div className="rounded-lg bg-anthracite-50 px-3 py-2 text-sm text-anthracite-600">
-              {t("settings.networkHint")}{" "}
-              <code className="text-anthracite-900">
-                http://{localIp}:{settings.port}
-              </code>
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-anthracite-50 px-3 py-2 text-sm text-anthracite-600">
+              <span>
+                {t("settings.networkHint")}{" "}
+                <code
+                  className={`text-anthracite-900 transition-all duration-150 ${
+                    ipRevealed ? "" : "blur-sm select-none"
+                  }`}
+                >
+                  http://{localIp}:{settings.port}
+                </code>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIpRevealed((v) => !v)}
+                title={ipRevealed ? t("settings.hideIp") : t("settings.showIp")}
+                className="icon-btn shrink-0"
+              >
+                {ipRevealed ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
             </div>
           )}
 
@@ -153,7 +249,6 @@ export default function Settings() {
             <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
               {saving ? t("settings.saving") : t("settings.save")}
             </button>
-            {saved && <span className="text-sm text-status-running">{t("settings.saved")}</span>}
           </div>
         </div>
       )}

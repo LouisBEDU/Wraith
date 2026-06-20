@@ -6,40 +6,54 @@ import StatsCards from "./StatsCards";
 import ContainersTable, { type ContainerAction } from "./ContainersTable";
 import ConfirmDialog from "./ConfirmDialog";
 import { RefreshIcon } from "./icons";
+import { useToast } from "../lib/toast";
+
+const ACTION_TOAST_KEY: Record<ContainerAction, string> = {
+  start: "content.toastStart",
+  stop: "content.toastStop",
+  restart: "content.toastRestart",
+  remove: "content.toastRemove",
+};
 
 export default function Content() {
   const { t } = useTranslation();
+  const toast = useToast();
   const [containers, setContainers] = useState<DockerContainer[]>([]);
   const [loading, setLoading] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<DockerContainer | null>(null);
 
   const loadContainers = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const result = await dockerPs();
       setContainers(parseDockerPs(result));
-    } catch (err) {
-      setError(String(err));
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadContainers();
+    loadContainers().catch((err) => toast.error(String(err)));
   }, [loadContainers]);
+
+  async function handleRefresh() {
+    try {
+      await loadContainers();
+      toast.success(t("content.toastRefreshed"));
+    } catch (err) {
+      toast.error(String(err));
+    }
+  }
 
   async function runAction(container: DockerContainer, action: ContainerAction) {
     setPendingId(container.ID);
-    setError(null);
     try {
       await dockerAction(action, container.ID);
       await loadContainers();
+      toast.success(t(ACTION_TOAST_KEY[action], { name: container.Names }));
     } catch (err) {
-      setError(String(err));
+      toast.error(String(err));
     } finally {
       setPendingId(null);
     }
@@ -70,19 +84,13 @@ export default function Content() {
         <button
           type="button"
           className="btn btn-primary w-full sm:w-auto"
-          onClick={loadContainers}
+          onClick={handleRefresh}
           disabled={loading}
         >
           <RefreshIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           {t("content.refresh")}
         </button>
       </div>
-
-      {error && (
-        <div className="rounded-xl border border-status-error/20 bg-status-error-soft text-status-error text-sm px-4 py-3 wrap-break-words">
-          {error}
-        </div>
-      )}
 
       <StatsCards containers={containers} />
       <ContainersTable containers={containers} pendingId={pendingId} onAction={handleAction} />

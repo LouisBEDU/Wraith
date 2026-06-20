@@ -19,7 +19,12 @@
     "refresh": "Actualiser",
     "removeTitle": "Supprimer le conteneur ?",
     "removeDescription": "Le conteneur « {{name}} » sera définitivement supprimé.",
-    "removeConfirm": "Supprimer"
+    "removeConfirm": "Supprimer",
+    "toastRefreshed": "Liste actualisée.",
+    "toastStart": "Conteneur « {{name}} » démarré.",
+    "toastStop": "Conteneur « {{name}} » arrêté.",
+    "toastRestart": "Conteneur « {{name}} » redémarré.",
+    "toastRemove": "Conteneur « {{name}} » supprimé."
   },
   "table": {
     "empty": "Aucun conteneur chargé. Cliquez sur « Actualiser ».",
@@ -55,16 +60,27 @@
     "language": "Langue",
     "languageFrench": "Français",
     "languageEnglish": "English",
+    "runInBackground": "Continuer en arrière-plan",
+    "runInBackgroundDescription": "Fermer la fenêtre ne quitte pas Wraith : l'app reste dans la zone de notification et le serveur web continue de tourner. Désactive pour que fermer la fenêtre quitte complètement l'app.",
     "webAccess": "Accès web",
     "webAccessDescription": "Expose Wraith sur le réseau pour le piloter depuis un navigateur, en plus de l'app desktop.",
     "port": "Port",
     "password": "Mot de passe",
     "passwordPlaceholder": "Laisser vide = accès libre (déconseillé hors localhost)",
+    "passwordPlaceholderSet": "Laisser vide = garder le mot de passe actuel",
+    "passwordBadgeSet": "Protégé",
+    "passwordBadgeUnset": "Accès libre",
+    "passwordClear": "Retirer le mot de passe (accès libre)",
     "passwordHint": "Demandé via l'écran de connexion Wraith au premier accès depuis le navigateur.",
     "networkHint": "Accessible depuis le réseau à l'adresse",
+    "showIp": "Afficher l'adresse",
+    "hideIp": "Masquer l'adresse",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
-    "saved": "Enregistré."
+    "saved": "Enregistré.",
+    "toastSaved": "Paramètres enregistrés.",
+    "toastSavedNoPassword": "Accès web activé sans mot de passe : accessible sans protection sur le réseau.",
+    "toastPasswordRemoved": "Mot de passe retiré : accès libre."
   },
   "login": {
     "appName": "Wraith",
