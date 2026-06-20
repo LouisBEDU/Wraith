@@ -56,6 +56,40 @@
     "removing": "Suppression",
     "dead": "Mort"
   },
+  "statusDetail": {
+    "up": "Actif depuis",
+    "exited": "Arrêté ({{code}}) il y a {{duration}}",
+    "restarting": "Redémarre ({{code}}) il y a {{duration}}",
+    "created": "Créé",
+    "paused": "En pause",
+    "removing": "Suppression en cours",
+    "dead": "Mort",
+    "duration": {
+      "lessThanASecond": "Moins d'une seconde",
+      "aboutAMinute": "Environ une minute",
+      "aboutAnHour": "Environ une heure",
+      "second_one": "{{count}} seconde",
+      "second_other": "{{count}} secondes",
+      "minute_one": "{{count}} minute",
+      "minute_other": "{{count}} minutes",
+      "hour_one": "{{count}} heure",
+      "hour_other": "{{count}} heures",
+      "day_one": "{{count}} jour",
+      "day_other": "{{count}} jours",
+      "week_one": "{{count}} semaine",
+      "week_other": "{{count}} semaines",
+      "month_one": "{{count}} mois",
+      "month_other": "{{count}} mois",
+      "year_one": "{{count}} an",
+      "year_other": "{{count}} ans"
+    },
+    "suffix": {
+      "healthy": "en bonne santé",
+      "unhealthy": "en mauvaise santé",
+      "healthStarting": "santé : démarrage",
+      "paused": "En pause"
+    }
+  },
   "stats": {
     "containers": "Conteneurs",
     "running": "En cours",

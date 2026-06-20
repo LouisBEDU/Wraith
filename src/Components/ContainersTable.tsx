@@ -49,12 +49,24 @@ export default function ContainersTable({
 
               return (
                 <tr key={container.ID} className="hover:bg-paper-dim transition-colors">
-                  <td className="px-5 py-3 font-medium text-anthracite-900">{container.Names}</td>
-                  <td className="px-5 py-3 text-anthracite-500">{container.Image}</td>
-                  <td className="px-5 py-3">
+                  <td className="px-5 py-3 font-medium text-anthracite-900">
+                    <div className="max-w-48 truncate select-none" title={container.Names}>
+                      {container.Names}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-anthracite-500">
+                    <div className="max-w-56 truncate select-none" title={container.Image}>
+                      {container.Image}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 whitespace-nowrap">
                     <StatusBadge state={container.State} status={container.Status} />
                   </td>
-                  <td className="hidden md:table-cell px-5 py-3 text-anthracite-500">{container.Ports || "—"}</td>
+                  <td className="hidden md:table-cell px-5 py-3 text-anthracite-500">
+                    <div className="max-w-40 truncate select-none" title={container.Ports || "—"}>
+                      {container.Ports || "—"}
+                    </div>
+                  </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <button
