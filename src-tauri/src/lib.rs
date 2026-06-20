@@ -1,25 +1,7 @@
 use std::process::Command;
 
-#[tauri::command]
-fn docker_ps() -> Result<String, String> {
-    println!("Executing 'docker ps' command...");
-    let output = Command::new("docker")
-        .args(["ps", "--all", "--format", "json"])
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    if !output.status.success() {
-        println!("Error executing 'docker ps': {}", String::from_utf8_lossy(&output.stderr));
-        return Err(String::from_utf8_lossy(&output.stderr).to_string());
-    }
-
-    println!("Docker ps output: {}", String::from_utf8_lossy(&output.stdout));
-
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
-}
-
 fn run_docker_command(args: &[&str]) -> Result<String, String> {
-    println!("Executing 'docker {}'...", args.join(" "));
+    println!("lib.run_docker_command() - Executing 'docker {}'...", args.join(" "));
     let output = Command::new("docker")
         .args(args)
         .output()
@@ -27,11 +9,17 @@ fn run_docker_command(args: &[&str]) -> Result<String, String> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        println!("Error executing 'docker {}': {}", args.join(" "), stderr);
+        println!("lib.run_docker_command() - Error executing 'docker {}': {}", args.join(" "), stderr);
         return Err(stderr);
     }
 
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+
+#[tauri::command]
+fn docker_ps() -> Result<String, String> {
+    run_docker_command(&["ps", "--all", "--format", "json"])
 }
 
 #[tauri::command]
