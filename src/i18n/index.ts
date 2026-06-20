@@ -24,6 +24,15 @@ i18n
       caches: ["localStorage"],
       lookupLocalStorage: "wraith_lang",
     },
+  })
+  .then(() => {
+    document.documentElement.lang = i18n.language;
   });
+
+// Garde l'attribut lang du <html> synchronisé avec la langue choisie dans
+// l'app (sélecteur dans Paramètres ou détection navigateur).
+i18n.on("languageChanged", (lng) => {
+  document.documentElement.lang = lng;
+});
 
 export default i18n;

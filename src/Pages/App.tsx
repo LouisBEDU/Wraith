@@ -12,9 +12,6 @@ export default function App() {
   const { t } = useTranslation();
   const [page, setPage] = useState<Page>("containers");
 
-  // En mode desktop (Tauri), pas d'auth du tout. En mode web, l'app reste
-  // cachée derrière l'écran de connexion jusqu'à ce que la session soit
-  // vérifiée auprès du serveur embarqué (cookie `wraith_session`).
   const [authenticated, setAuthenticated] = useState(isTauri);
   const [checkingSession, setCheckingSession] = useState(!isTauri);
 
