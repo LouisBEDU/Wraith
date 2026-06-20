@@ -54,6 +54,10 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Configure web access to Wraith.",
+    "updateAvailable": "New version available (v{{version}})",
+    "updateDescription": "Downloads and installs the update, then restarts Wraith.",
+    "updateButton": "Update",
+    "updateInstalling": "Installing…",
     "webOnlyDesktop": "Settings can only be changed from the Wraith desktop app, not from this web access.",
     "loading": "Loading…",
     "language": "Language",

@@ -102,6 +102,16 @@ export function RefreshIcon({ className = base }: IconProps) {
   );
 }
 
+export function DownloadIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3v12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M7 10.5 12 15.5 17 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4.5 18.5h15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function PlayIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">

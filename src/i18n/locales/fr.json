@@ -54,6 +54,10 @@
   "settings": {
     "title": "Paramètres",
     "subtitle": "Configure l'accès web à Wraith.",
+    "updateAvailable": "Nouvelle version disponible (v{{version}})",
+    "updateDescription": "Télécharge et installe la mise à jour, puis redémarre Wraith.",
+    "updateButton": "Mettre à jour",
+    "updateInstalling": "Installation…",
     "webOnlyDesktop": "Les paramètres ne sont modifiables que depuis l'app desktop Wraith, pas depuis cet accès web.",
     "loading": "Chargement…",
     "language": "Langue",
