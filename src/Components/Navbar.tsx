@@ -9,6 +9,7 @@ import {
   SettingsIcon,
   VolumesIcon,
 } from "./icons";
+import { useUpdate } from "../lib/update";
 
 export type Page = "containers" | "settings";
 
@@ -27,6 +28,7 @@ type NavbarProps = {
 
 export default function Navbar({ page, onNavigate }: NavbarProps) {
   const { t } = useTranslation();
+  const update = useUpdate();
   const listRef = useRef<HTMLUListElement>(null);
   const [hasScrollbar, setHasScrollbar] = useState(false);
 
@@ -90,16 +92,31 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
         <div className="px-3 py-4 border-t border-white/10">
           <button
             type="button"
-            title={t("nav.settings")}
+            title={
+              update.available
+                ? `${t("nav.settings")} — ${t("settings.updateAvailable", { version: update.version })}`
+                : t("nav.settings")
+            }
             onClick={() => onNavigate("settings")}
             className={`sidebar-link ${
               page === "settings" ? "bg-accent-600 text-paper" : "text-paper/55 cursor-pointer"
             }`}
           >
-            <span className="sidebar-icon">
+            <span className="sidebar-icon relative">
               <SettingsIcon className="h-5 w-5 shrink-0" />
+              {update.available && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent-500 ring-2 ring-anthracite-900" />
+                </span>
+              )}
             </span>
-            <span className="sidebar-fade">{t("nav.settings")}</span>
+            <span className="sidebar-fade flex-1 items-center justify-between gap-2">
+              <span>{t("nav.settings")}</span>
+              {update.available && (
+                <span className="h-1.5 w-1.5 rounded-full bg-accent-400 shrink-0" />
+              )}
+            </span>
           </button>
           <p className="sidebar-fade px-3 pt-2 text-[11px] text-paper/35">
             v{import.meta.env.VITE_APP_VERSION}

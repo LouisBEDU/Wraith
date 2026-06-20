@@ -141,8 +141,8 @@ export default function Settings() {
           onChange={(e) => i18n.changeLanguage(e.target.value)}
           className="rounded-lg border border-anthracite-100 px-3 py-2 text-sm text-anthracite-900 focus:outline-none focus:ring-2 focus:ring-accent-500"
         >
-          <option value="fr">{t("settings.languageFrench")}</option>
           <option value="en">{t("settings.languageEnglish")}</option>
+          <option value="fr">{t("settings.languageFrench")}</option>
         </select>
       </div>
 
