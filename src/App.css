@@ -8,10 +8,22 @@
 
 @layer components {
   .titlebar {
-    @apply bg-slate-900 text-slate-50 select-none grid top-0 left-0 right-0 z-50;
+    @apply relative bg-slate-900 text-slate-50 select-none grid top-0 left-0 right-0 z-50;
+
     height: 40px;
     grid-template-columns: auto max-content;
 
+    & > div[data-tauri-drag-region] {
+      @apply z-50;
+
+      & > img {
+        @apply h-5 w-auto mr-2;
+      }
+    }
+
+    & > .title {
+      @apply flex items-center px-4;
+    }
     & > .controls {
       @apply flex gap-2;
 

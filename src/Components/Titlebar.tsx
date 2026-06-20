@@ -1,19 +1,36 @@
-import { getCurrentWindow } from '@tauri-apps/api/window';
-
-const appWindow = getCurrentWindow();
+import { useEffect, useState } from 'react';
+import type { Window } from "@tauri-apps/api/window";
 
 export default function Titlebar() {
+  const [appWindow, setAppWindow] = useState<Window>();
+
+  useEffect(() => {
+    import("@tauri-apps/api/window").then(async ({ getCurrentWindow }) => {
+      const win = getCurrentWindow();
+      setAppWindow(win);
+    });
+  }, []);
+
+  if (!appWindow) return;
+
+  const handleMinimize = () => appWindow.minimize();
+  const handleMaximize = () => appWindow.toggleMaximize();
+  const handleClose = () => appWindow.close();
+
   return (
     <div className="titlebar">
-      <div data-tauri-drag-region></div>
+      <div data-tauri-drag-region className="title">
+        <img src="/icon.svg" alt={import.meta.env.VITE_APP_NAME} />
+        {import.meta.env.VITE_APP_NAME}
+      </div>
       <div className="controls">
-        <button onClick={() => appWindow.minimize()} title="minimize">
+        <button onClick={handleMinimize} title="minimize">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="#fff"><path d="M280-160q-8.5 0-14.25-5.76T260-180.03q0-8.51 5.75-14.24T280-200h400q8.5 0 14.25 5.76t5.75 14.27q0 8.51-5.75 14.24T680-160H280Z"/></svg>
         </button>
-        <button onClick={() => appWindow.toggleMaximize()} title="maximize">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="#fff"><path d="M200-200h116.92q8.5 0 14.25 5.76t5.75 14.27q0 8.51-5.75 14.24T316.92-160H192.31q-13.73 0-23.02-9.29T160-192.31v-124.61q0-8.5 5.76-14.25t14.27-5.75q8.51 0 14.24 5.75t5.73 14.25V-200Zm560.77 0v-116.92q0-8.5 5.76-14.25 5.75-5.75 14.27-5.75 8.51 0 14.24 5.75t5.73 14.25v124.61q0 13.73-9.29 23.02T768.46-160H643.85q-8.5 0-14.25-5.76t-5.75-14.27q0-8.51 5.75-14.24t14.25-5.73h116.92ZM200-760v116.92q0 8.5-5.76 14.25t-14.27 5.75q-8.51 0-14.24-5.75T160-643.08v-124.61q0-13.73 9.29-23.02t23.02-9.29h124.61q8.5 0 14.25 5.76t5.75 14.27q0 8.51-5.75 14.24T316.92-760H200Zm560.77 0H643.85q-8.5 0-14.25-5.76t-5.75-14.27q0-8.51 5.75-14.24t14.25-5.73h124.61q13.73 0 23.02 9.29t9.29 23.02v124.61q0 8.5-5.76 14.25t-14.27 5.75q-8.51 0-14.24-5.75t-5.73-14.25V-760Z"/></svg>
+        <button onClick={handleMaximize} title="maximize">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="#fff"><path d="M224.62-160q-27.62 0-46.12-18.5Q160-197 160-224.62v-510.76q0-27.62 18.5-46.12Q197-800 224.62-800h510.76q27.62 0 46.12 18.5Q800-763 800-735.38v510.76q0 27.62-18.5 46.12Q763-160 735.38-160H224.62Zm0-40h510.76q9.24 0 16.93-7.69 7.69-7.69 7.69-16.93v-510.76q0-9.24-7.69-16.93-7.69-7.69-16.93-7.69H224.62q-9.24 0-16.93 7.69-7.69 7.69-7.69 16.93v510.76q0 9.24 7.69 16.93 7.69 7.69 16.93 7.69Z"/></svg>
         </button>
-        <button onClick={() => appWindow.close()} title="close">
+        <button onClick={handleClose} title="close">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="#fff"><path d="M480-451.69 270.15-241.85q-5.61 5.62-13.77 6-8.15.39-14.53-6-6.39-6.38-6.39-14.15 0-7.77 6.39-14.15L451.69-480 241.85-689.85q-5.62-5.61-6-13.77-.39-8.15 6-14.53 6.38-6.39 14.15-6.39 7.77 0 14.15 6.39L480-508.31l209.85-209.84q5.61-5.62 13.77-6 8.15-.39 14.53 6 6.39 6.38 6.39 14.15 0 7.77-6.39 14.15L508.31-480l209.84 209.85q5.62 5.61 6 13.77.39 8.15-6 14.53-6.38 6.39-14.15 6.39-7.77 0-14.15-6.39L480-451.69Z"/></svg>
         </button>
       </div>
