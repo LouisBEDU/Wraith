@@ -1,6 +1,5 @@
 {
   "common": {
-    "loading": "Loading…",
     "cancel": "Cancel",
     "confirm": "Confirm"
   },
@@ -77,7 +76,6 @@
     "hideIp": "Hide address",
     "save": "Save",
     "saving": "Saving…",
-    "saved": "Saved.",
     "toastSaved": "Settings saved.",
     "toastSavedNoPassword": "Web access enabled without a password: reachable with no protection on the network.",
     "toastPasswordRemoved": "Password removed: open access."

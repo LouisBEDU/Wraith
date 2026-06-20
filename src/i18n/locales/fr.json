@@ -1,6 +1,5 @@
 {
   "common": {
-    "loading": "Chargement…",
     "cancel": "Annuler",
     "confirm": "Confirmer"
   },
@@ -77,7 +76,6 @@
     "hideIp": "Masquer l'adresse",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
-    "saved": "Enregistré.",
     "toastSaved": "Paramètres enregistrés.",
     "toastSavedNoPassword": "Accès web activé sans mot de passe : accessible sans protection sur le réseau.",
     "toastPasswordRemoved": "Mot de passe retiré : accès libre."

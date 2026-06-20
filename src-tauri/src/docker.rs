@@ -7,7 +7,9 @@ use std::os::windows::process::CommandExt;
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 pub fn run_docker_command(args: &[&str]) -> Result<String, String> {
-    println!("docker::run_docker_command() - Executing 'docker {}'...", args.join(" "));
+    if cfg!(debug_assertions) {
+        println!("docker::run_docker_command() - Executing 'docker {}'...", args.join(" "));
+    }
 
     let mut command = Command::new("docker");
     command.args(args);
@@ -19,11 +21,13 @@ pub fn run_docker_command(args: &[&str]) -> Result<String, String> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        println!(
-            "docker::run_docker_command() - Error executing 'docker {}': {}",
-            args.join(" "),
-            stderr
-        );
+        if cfg!(debug_assertions) {
+            println!(
+                "docker::run_docker_command() - Error executing 'docker {}': {}",
+                args.join(" "),
+                stderr
+            );
+        }
         return Err(stderr);
     }
 

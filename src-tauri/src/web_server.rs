@@ -1,16 +1,20 @@
 use crate::docker;
-use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::collections::HashMap;
+use std::io::Read;
+use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tiny_http::{Header, Method, Response, Server, StatusCode};
+
+const SESSION_TTL: Duration = Duration::from_secs(60 * 60 * 24);
+const MAX_LOGIN_BODY_BYTES: u64 = 4096;
 
 #[derive(Default)]
 pub struct RuntimeConfig {
     pub enabled: bool,
     pub password_hash: String,
-    pub sessions: HashSet<String>,
+    pub sessions: HashMap<String, Instant>,
 }
 
 pub type SharedConfig = Arc<Mutex<RuntimeConfig>>;
@@ -74,18 +78,36 @@ fn bind_with_retry(address: &str) -> Result<Server, String> {
     Err(last_error)
 }
 
+fn with_security_headers<R: Read>(response: Response<R>) -> Response<R> {
+    response
+        .with_header(Header::from_bytes(&b"X-Content-Type-Options"[..], &b"nosniff"[..]).unwrap())
+        .with_header(Header::from_bytes(&b"X-Frame-Options"[..], &b"DENY"[..]).unwrap())
+        .with_header(Header::from_bytes(&b"Referrer-Policy"[..], &b"no-referrer"[..]).unwrap())
+        .with_header(
+            Header::from_bytes(
+                &b"Content-Security-Policy"[..],
+                &b"default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'"[..],
+            )
+            .unwrap(),
+        )
+}
+
 fn text_response(body: impl Into<String>, status: u16) -> Response<std::io::Cursor<Vec<u8>>> {
     let header = Header::from_bytes(&b"Content-Type"[..], &b"text/plain; charset=utf-8"[..]).unwrap();
-    Response::from_string(body.into())
-        .with_status_code(StatusCode(status))
-        .with_header(header)
+    with_security_headers(
+        Response::from_string(body.into())
+            .with_status_code(StatusCode(status))
+            .with_header(header),
+    )
 }
 
 fn json_response(body: serde_json::Value, status: u16) -> Response<std::io::Cursor<Vec<u8>>> {
     let header = Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap();
-    Response::from_string(body.to_string())
-        .with_status_code(StatusCode(status))
-        .with_header(header)
+    with_security_headers(
+        Response::from_string(body.to_string())
+            .with_status_code(StatusCode(status))
+            .with_header(header),
+    )
 }
 
 fn handle_request(request: tiny_http::Request, config: &SharedConfig, frontend_dir: &Path) {
@@ -128,7 +150,10 @@ fn is_authorized(request: &tiny_http::Request, config: &SharedConfig) -> bool {
         return true;
     }
     match session_token(request) {
-        Some(token) => cfg.sessions.contains(&token),
+        Some(token) => cfg
+            .sessions
+            .get(&token)
+            .is_some_and(|created| created.elapsed() < SESSION_TTL),
         None => false,
     }
 }
@@ -162,11 +187,7 @@ fn handle_api(request: tiny_http::Request, method: &Method, rest: &str, config: 
 
     match result {
         Ok(Some(raw)) => {
-            let body = serde_json::json!({ "raw": raw }).to_string();
-            let header =
-                Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap();
-            let response = Response::from_string(body).with_header(header);
-            let _ = request.respond(response);
+            let _ = request.respond(json_response(serde_json::json!({ "raw": raw }), 200));
         }
         Ok(None) => {
             let _ = request.respond(text_response("OK", 200));
@@ -179,7 +200,12 @@ fn handle_api(request: tiny_http::Request, method: &Method, rest: &str, config: 
 
 fn handle_login(mut request: tiny_http::Request, config: &SharedConfig) {
     let mut body = String::new();
-    if request.as_reader().read_to_string(&mut body).is_err() {
+    if request
+        .as_reader()
+        .take(MAX_LOGIN_BODY_BYTES)
+        .read_to_string(&mut body)
+        .is_err()
+    {
         let _ = request.respond(json_response(serde_json::json!({ "ok": false }), 400));
         return;
     }
@@ -198,13 +224,17 @@ fn handle_login(mut request: tiny_http::Request, config: &SharedConfig) {
         return;
     }
 
+    let now = Instant::now();
+    cfg.sessions
+        .retain(|_, created| now.duration_since(*created) < SESSION_TTL);
+
     let token = generate_token();
-    cfg.sessions.insert(token.clone());
+    cfg.sessions.insert(token.clone(), now);
     drop(cfg);
 
     let cookie = Header::from_bytes(
         &b"Set-Cookie"[..],
-        format!("wraith_session={token}; Path=/; SameSite=Lax").into_bytes(),
+        format!("wraith_session={token}; Path=/; SameSite=Lax; HttpOnly").into_bytes(),
     )
     .unwrap();
 
@@ -217,8 +247,11 @@ fn handle_logout(request: tiny_http::Request, config: &SharedConfig) {
         config.lock().unwrap().sessions.remove(&token);
     }
 
-    let cookie =
-        Header::from_bytes(&b"Set-Cookie"[..], &b"wraith_session=; Path=/; Max-Age=0"[..]).unwrap();
+    let cookie = Header::from_bytes(
+        &b"Set-Cookie"[..],
+        &b"wraith_session=; Path=/; Max-Age=0; HttpOnly"[..],
+    )
+    .unwrap();
     let response = json_response(serde_json::json!({ "ok": true }), 200).with_header(cookie);
     let _ = request.respond(response);
 }
@@ -240,7 +273,19 @@ fn handle_static(request: tiny_http::Request, url: &str, frontend_dir: &Path) {
     } else {
         url.trim_start_matches('/')
     };
-    let mut path = frontend_dir.join(relative);
+    let relative_path = Path::new(relative);
+
+    let is_safe = !relative_path.is_absolute()
+        && !relative_path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir));
+
+    if !is_safe {
+        let _ = request.respond(text_response("Requête invalide.", 400));
+        return;
+    }
+
+    let mut path = frontend_dir.join(relative_path);
 
     if !path.is_file() {
         path = frontend_dir.join("index.html");
@@ -255,7 +300,7 @@ fn handle_static(request: tiny_http::Request, url: &str, frontend_dir: &Path) {
         Ok(file) => {
             let content_type = guess_content_type(&path);
             let header = Header::from_bytes(&b"Content-Type"[..], content_type.as_bytes()).unwrap();
-            let response = Response::from_file(file).with_header(header);
+            let response = with_security_headers(Response::from_file(file).with_header(header));
             let _ = request.respond(response);
         }
         Err(_) => {
