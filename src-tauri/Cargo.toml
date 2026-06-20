@@ -1,6 +1,6 @@
 [package]
 name = "Wraith"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Tauri App"
 authors = ["Dubsinho"]
 edition = "2024"
@@ -22,4 +22,6 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
+tiny_http = "0.12"
+local-ip-address = "0.6"
+rand = "0.8"

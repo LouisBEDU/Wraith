@@ -1,28 +1,23 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
+import { dockerAction, dockerPs } from "../lib/api";
 import { parseDockerPs, type DockerContainer } from "../types/docker";
 import StatsCards from "./StatsCards";
 import ContainersTable, { type ContainerAction } from "./ContainersTable";
+import ConfirmDialog from "./ConfirmDialog";
 import { RefreshIcon } from "./icons";
-
-const ACTION_COMMAND: Record<ContainerAction, string> = {
-  start: "docker_start",
-  stop: "docker_stop",
-  restart: "docker_restart",
-  remove: "docker_remove",
-};
 
 export default function Content() {
   const [containers, setContainers] = useState<DockerContainer[]>([]);
   const [loading, setLoading] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<DockerContainer | null>(null);
 
   const loadContainers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await invoke<string>("docker_ps");
+      const result = await dockerPs();
       setContainers(parseDockerPs(result));
     } catch (err) {
       setError(String(err));
@@ -35,21 +30,32 @@ export default function Content() {
     loadContainers();
   }, [loadContainers]);
 
-  async function handleAction(container: DockerContainer, action: ContainerAction) {
-    if (action === "remove" && !window.confirm(`Supprimer le conteneur « ${container.Names} » ?`)) {
-      return;
-    }
-
+  async function runAction(container: DockerContainer, action: ContainerAction) {
     setPendingId(container.ID);
     setError(null);
     try {
-      await invoke(ACTION_COMMAND[action], { id: container.ID });
+      await dockerAction(action, container.ID);
       await loadContainers();
     } catch (err) {
       setError(String(err));
     } finally {
       setPendingId(null);
     }
+  }
+
+  function handleAction(container: DockerContainer, action: ContainerAction) {
+    if (action === "remove") {
+      setPendingRemoval(container);
+      return;
+    }
+    runAction(container, action);
+  }
+
+  function confirmRemoval() {
+    if (!pendingRemoval) return;
+    const container = pendingRemoval;
+    setPendingRemoval(null);
+    runAction(container, "remove");
   }
 
   return (
@@ -80,6 +86,20 @@ export default function Content() {
 
       <StatsCards containers={containers} />
       <ContainersTable containers={containers} pendingId={pendingId} onAction={handleAction} />
+
+      <ConfirmDialog
+        open={pendingRemoval !== null}
+        title="Supprimer le conteneur ?"
+        description={
+          pendingRemoval && (
+            <>Le conteneur « {pendingRemoval.Names} » sera définitivement supprimé.</>
+          )
+        }
+        confirmLabel="Supprimer"
+        danger
+        onConfirm={confirmRemoval}
+        onCancel={() => setPendingRemoval(null)}
+      />
     </div>
   );
 }
