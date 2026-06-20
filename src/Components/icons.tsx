@@ -6,9 +6,19 @@ const base = "h-5 w-5";
 
 export function LogoIcon({ className = base }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 2 3 6.5v11L12 22l9-4.5v-11L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M3 6.5 12 11l9-4.5M12 11v11" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <svg viewBox="0 0 120 120" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gspec" x1="0" y1="0" x2="0.35" y2="1">
+          <stop offset="0" stopColor="#8A6BFF"></stop>
+          <stop offset="1" stopColor="#2F80ED"></stop>
+        </linearGradient>
+      </defs>
+      <path d="M26,106 L26,64 C26,34 41,15 60,15 C79,15 94,34 94,64 L94,106 Z" fill="url(#gspec)" opacity="0.26" transform="translate(60,70) scale(1.16) translate(-60,-70)"></path>
+      <path d="M26,106 L26,64 C26,34 41,15 60,15 C79,15 94,34 94,64 L94,106 Z" fill="url(#gspec)" opacity="0.5" transform="translate(60,70) scale(0.94) translate(-60,-70)"></path>
+      <path d="M26,106 L26,64 C26,34 41,15 60,15 C79,15 94,34 94,64 L94,106 Z" fill="url(#gspec)" transform="translate(60,70) scale(0.72) translate(-60,-70)"></path>
+      <ellipse cx="60" cy="69.8" rx="11.5" ry="19.4" fill="#0B0D12" opacity="0.3"></ellipse>
+      <circle cx="54.96" cy="55.6" r="2.45" fill="#E7DEFF"></circle>
+      <circle cx="65.04" cy="55.6" r="2.45" fill="#E7DEFF"></circle>
     </svg>
   );
 }

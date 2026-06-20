@@ -23,7 +23,7 @@ export default function ContainersTable({ containers, pendingId, onAction }: Con
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-160 text-sm">
           <thead>
             <tr className="bg-anthracite-50 text-left text-xs uppercase tracking-wide text-anthracite-500">
               <th className="px-5 py-3 font-medium">Nom</th>
@@ -78,7 +78,7 @@ export default function ContainersTable({ containers, pendingId, onAction }: Con
                       <button
                         type="button"
                         title="Supprimer"
-                        className="icon-btn hover:!bg-status-error-soft hover:!text-status-error"
+                        className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
                         disabled={isPending}
                         onClick={() => onAction(container, "remove")}
                       >

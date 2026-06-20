@@ -20,16 +20,18 @@ export default function Navbar() {
   return (
     <div className="sidebar-rail">
       <nav className="sidebar-panel">
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10 text-paper">
-          <LogoIcon className="h-6 w-6 text-accent-400 shrink-0" />
+        <div className="sidebar-header">
+          <span className="sidebar-logo">
+            <LogoIcon className="h-8 w-8 text-accent-400 shrink-0" />
+          </span>
           <span className="sidebar-fade font-semibold tracking-wide">
             {import.meta.env.VITE_APP_NAME}
           </span>
         </div>
 
         <ul className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
-          {navItems.map(({ label, icon: Icon, active }) => (
-            <li key={label}>
+          {navItems.map(({ label, icon: Icon, active }, index) => (
+            <li key={`${label}-${index}`}>
               <button
                 type="button"
                 title={label}
@@ -38,7 +40,9 @@ export default function Navbar() {
                   active ? "bg-accent-600 text-paper" : "text-paper/55 cursor-default"
                 }`}
               >
-                <Icon className="h-5 w-5 shrink-0" />
+                <span className="sidebar-icon">
+                  <Icon className="h-5 w-5 shrink-0" />
+                </span>
                 <span className="sidebar-fade flex-1 items-center justify-between gap-2">
                   <span>{label}</span>
                   {!active && (
@@ -54,7 +58,9 @@ export default function Navbar() {
 
         <div className="px-3 py-4 border-t border-white/10">
           <button type="button" title="Paramètres" disabled className="sidebar-link text-paper/55 cursor-default">
-            <SettingsIcon className="h-5 w-5 shrink-0" />
+            <span className="sidebar-icon">
+              <SettingsIcon className="h-5 w-5 shrink-0" />
+            </span>
             <span className="sidebar-fade">Paramètres</span>
           </button>
           <p className="sidebar-fade px-3 pt-2 text-[11px] text-paper/35">v0.1.0</p>

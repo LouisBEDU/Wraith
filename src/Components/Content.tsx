@@ -73,7 +73,7 @@ export default function Content() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-status-error/20 bg-status-error-soft text-status-error text-sm px-4 py-3 break-words">
+        <div className="rounded-xl border border-status-error/20 bg-status-error-soft text-status-error text-sm px-4 py-3 wrap-break-words">
           {error}
         </div>
       )}
