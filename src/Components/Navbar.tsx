@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import {
   ContainersIcon,
   ImagesIcon,
@@ -17,8 +18,24 @@ const navItems = [
 ];
 
 export default function Navbar() {
+  const listRef = useRef<HTMLUListElement>(null);
+  const [hasScrollbar, setHasScrollbar] = useState(false);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    const checkOverflow = () => setHasScrollbar(el.scrollHeight > el.clientHeight);
+
+    checkOverflow();
+    const observer = new ResizeObserver(checkOverflow);
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="sidebar-rail">
+    <div className="sidebar-rail" data-has-scrollbar={hasScrollbar}>
       <nav className="sidebar-panel">
         <div className="sidebar-header">
           <span className="sidebar-logo">
@@ -29,7 +46,7 @@ export default function Navbar() {
           </span>
         </div>
 
-        <ul className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
+        <ul ref={listRef} className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
           {navItems.map(({ label, icon: Icon, active }, index) => (
             <li key={`${label}-${index}`}>
               <button
