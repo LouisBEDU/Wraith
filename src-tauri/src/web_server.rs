@@ -179,6 +179,7 @@ fn handle_api(request: tiny_http::Request, method: &Method, rest: &str, config: 
         (Method::Post, ["containers", id, "stop"]) => docker::stop(id).map(|_| None),
         (Method::Post, ["containers", id, "restart"]) => docker::restart(id).map(|_| None),
         (Method::Delete, ["containers", id]) => docker::remove(id).map(|_| None),
+        (Method::Get, ["containers", id, "logs"]) => docker::logs(id).map(Some),
         _ => {
             let _ = request.respond(text_response("Route inconnue.", 404));
             return;

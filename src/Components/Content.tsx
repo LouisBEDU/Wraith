@@ -5,6 +5,7 @@ import { parseDockerPs, type DockerContainer } from "../types/docker";
 import StatsCards from "./StatsCards";
 import ContainersTable, { type ContainerAction } from "./ContainersTable";
 import ConfirmDialog from "./ConfirmDialog";
+import LogsDialog from "./LogsDialog";
 import { RefreshIcon } from "./icons";
 import { useToast } from "../lib/toast";
 
@@ -22,6 +23,7 @@ export default function Content() {
   const [loading, setLoading] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<DockerContainer | null>(null);
+  const [logsContainer, setLogsContainer] = useState<DockerContainer | null>(null);
 
   const loadContainers = useCallback(async () => {
     setLoading(true);
@@ -93,7 +95,14 @@ export default function Content() {
       </div>
 
       <StatsCards containers={containers} />
-      <ContainersTable containers={containers} pendingId={pendingId} onAction={handleAction} />
+      <ContainersTable
+        containers={containers}
+        pendingId={pendingId}
+        onAction={handleAction}
+        onShowLogs={setLogsContainer}
+      />
+
+      <LogsDialog container={logsContainer} onClose={() => setLogsContainer(null)} />
 
       <ConfirmDialog
         open={pendingRemoval !== null}

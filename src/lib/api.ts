@@ -72,6 +72,14 @@ export async function dockerAction(action: ContainerAction, id: string): Promise
   }
 }
 
+export async function dockerLogs(id: string): Promise<string> {
+  if (isTauri) {
+    return invoke<string>("docker_logs", { id });
+  }
+  const data = await apiFetchJson<{ raw: string }>(`/containers/${encodeURIComponent(id)}/logs`);
+  return data.raw;
+}
+
 export async function getWebServerSettings(): Promise<WebServerSettings> {
   return invoke<WebServerSettings>("get_web_server_settings");
 }

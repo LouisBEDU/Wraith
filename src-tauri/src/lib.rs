@@ -88,6 +88,11 @@ fn docker_remove(id: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn docker_logs(id: &str) -> Result<String, String> {
+    docker::logs(id)
+}
+
+#[tauri::command]
 fn get_web_server_settings(app: AppHandle) -> settings::WebServerSettingsView {
     settings::WebServerSettingsView::from(&settings::load(&app))
 }
@@ -183,6 +188,7 @@ pub fn run() {
             docker_stop,
             docker_restart,
             docker_remove,
+            docker_logs,
             get_web_server_settings,
             save_web_server_settings,
             get_local_ip

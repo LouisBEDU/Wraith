@@ -32,10 +32,20 @@
     "status": "Status",
     "ports": "Ports",
     "actions": "Actions",
+    "logs": "Logs",
     "start": "Start",
     "stop": "Stop",
     "restart": "Restart",
     "remove": "Remove"
+  },
+  "logsDialog": {
+    "title": "Logs — {{name}}",
+    "subtitle": "Last 300 lines, auto-refreshing.",
+    "loading": "Loading logs…",
+    "empty": "No logs.",
+    "copy": "Copy logs",
+    "jumpToLatest": "Jump to latest",
+    "lineCount": "{{count}} lines shown"
   },
   "status": {
     "running": "Running",

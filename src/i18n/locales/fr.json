@@ -32,10 +32,20 @@
     "status": "Statut",
     "ports": "Ports",
     "actions": "Actions",
+    "logs": "Logs",
     "start": "Démarrer",
     "stop": "Arrêter",
     "restart": "Redémarrer",
     "remove": "Supprimer"
+  },
+  "logsDialog": {
+    "title": "Logs — {{name}}",
+    "subtitle": "300 dernières lignes, actualisées automatiquement.",
+    "loading": "Chargement des logs…",
+    "empty": "Aucun log.",
+    "copy": "Copier les logs",
+    "jumpToLatest": "Voir les derniers logs",
+    "lineCount": "{{count}} lignes affichées"
   },
   "status": {
     "running": "En cours",

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { DockerContainer } from "../types/docker";
 import StatusBadge from "./StatusBadge";
-import { ContainersIcon, PlayIcon, RestartIcon, StopIcon, TrashIcon } from "./icons";
+import { ContainersIcon, PlayIcon, RestartIcon, StopIcon, TerminalIcon, TrashIcon } from "./icons";
 
 export type ContainerAction = "start" | "stop" | "restart" | "remove";
 
@@ -9,9 +9,15 @@ type ContainersTableProps = {
   containers: DockerContainer[];
   pendingId: string | null;
   onAction: (container: DockerContainer, action: ContainerAction) => void;
+  onShowLogs: (container: DockerContainer) => void;
 };
 
-export default function ContainersTable({ containers, pendingId, onAction }: ContainersTableProps) {
+export default function ContainersTable({
+  containers,
+  pendingId,
+  onAction,
+  onShowLogs,
+}: ContainersTableProps) {
   const { t } = useTranslation();
 
   if (containers.length === 0) {
@@ -51,6 +57,14 @@ export default function ContainersTable({ containers, pendingId, onAction }: Con
                   <td className="hidden md:table-cell px-5 py-3 text-anthracite-500">{container.Ports || "—"}</td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        title={t("table.logs")}
+                        className="icon-btn"
+                        onClick={() => onShowLogs(container)}
+                      >
+                        <TerminalIcon className="h-4 w-4" />
+                      </button>
                       <button
                         type="button"
                         title={t("table.start")}
