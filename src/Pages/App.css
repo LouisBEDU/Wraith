@@ -1,0 +1,211 @@
+@import "tailwindcss";
+
+@theme {
+  /* Anthracite — couleur de base (textes, sidebar, boutons secondaires) */
+  --color-anthracite-950: #101114;
+  --color-anthracite-900: #18191d;
+  --color-anthracite-800: #212226;
+  --color-anthracite-700: #2c2d33;
+  --color-anthracite-600: #3c3d44;
+  --color-anthracite-500: #565861;
+  --color-anthracite-400: #797b85;
+  --color-anthracite-300: #a3a5ad;
+  --color-anthracite-200: #cfd0d5;
+  --color-anthracite-100: #e6e6e9;
+  --color-anthracite-50: #f1f1f3;
+
+  /* Accent bleu — actions principales / états actifs */
+  --color-accent-700: #1d4fc4;
+  --color-accent-600: #2f5fe0;
+  --color-accent-500: #4671ea;
+  --color-accent-400: #7b97f1;
+  --color-accent-100: #dfe7fb;
+  --color-accent-50: #eef2fd;
+
+  /* Blanc cassé — fond principal */
+  --color-paper: #faf9f6;
+  --color-paper-dim: #f2f1ed;
+
+  /* Statuts */
+  --color-status-running: #1f9d55;
+  --color-status-running-soft: #e3f6e9;
+  --color-status-stopped: #6b6d76;
+  --color-status-stopped-soft: #eceeef;
+  --color-status-restarting: #c4790e;
+  --color-status-restarting-soft: #faedd6;
+  --color-status-error: #d23c3c;
+  --color-status-error-soft: #fbe3e3;
+}
+
+@layer base {
+  body {
+    @apply bg-paper text-anthracite-900;
+  }
+
+  /* Scrollbars custom (Firefox) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-anthracite-300) transparent;
+  }
+
+  /* Scrollbars custom (WebKit / Chromium, moteur de Tauri) */
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-anthracite-300);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-anthracite-400);
+  }
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+@layer components {
+  .titlebar {
+    @apply relative bg-anthracite-950 text-paper select-none grid top-0 left-0 right-0 z-50 border-b border-black/40;
+
+    height: 44px;
+    grid-template-columns: auto max-content;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    & > div[data-tauri-drag-region] {
+      @apply z-50 flex items-center gap-2.5 px-3;
+
+      & > .icon-chip {
+        @apply h-5 w-5;
+      }
+
+      & > .app-name {
+        @apply text-[13px] font-medium tracking-wide text-paper/85;
+      }
+    }
+
+    & > .controls {
+      @apply flex gap-1 items-center px-1.5;
+
+      & > button {
+        @apply appearance-none p-0 border-none inline-flex justify-center items-center bg-transparent rounded-md transition-colors;
+
+        height: 30px;
+        width: 38px;
+
+        & > svg {
+          @apply h-3.5 w-3.5;
+        }
+
+        &:hover {
+          @apply bg-white/10;
+        }
+
+        &.close-btn:hover {
+          @apply bg-status-error;
+        }
+      }
+    }
+  }
+
+  /* Sidebar — rail d'icônes qui s'étend par-dessus le contenu au survol */
+  .sidebar-rail {
+    @apply relative h-full shrink-0;
+
+    width: 4.5rem;
+  }
+  @media (min-width: 1024px) {
+    .sidebar-rail {
+      width: 15rem;
+    }
+  }
+
+  .sidebar-panel {
+    @apply absolute inset-y-0 left-0 z-40 flex h-full flex-col bg-anthracite-900 text-paper overflow-hidden;
+
+    width: 4.5rem;
+    transition: width 0.18s ease, box-shadow 0.18s ease;
+  }
+  .sidebar-rail:hover .sidebar-panel {
+    width: 15rem;
+    box-shadow: 12px 0 28px -8px rgba(0, 0, 0, 0.35);
+  }
+  @media (min-width: 1024px) {
+    .sidebar-panel {
+      position: relative;
+      width: 15rem;
+      box-shadow: none;
+    }
+  }
+
+  .sidebar-fade {
+    @apply flex items-center overflow-hidden whitespace-nowrap;
+
+    opacity: 0;
+    max-width: 0;
+    transition: opacity 0.15s ease, max-width 0.18s ease;
+  }
+  .sidebar-rail:hover .sidebar-fade {
+    opacity: 1;
+    max-width: 11rem;
+  }
+  @media (min-width: 1024px) {
+    .sidebar-fade {
+      opacity: 1;
+      max-width: 11rem;
+    }
+  }
+
+  .sidebar-link {
+    @apply flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors;
+  }
+
+  /* Boutons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium px-4 py-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply bg-accent-600 text-paper hover:bg-accent-700;
+  }
+  .btn-secondary {
+    @apply bg-anthracite-900 text-paper hover:bg-anthracite-800;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-anthracite-600 hover:bg-anthracite-100;
+  }
+  .icon-btn {
+    @apply inline-flex items-center justify-center h-8 w-8 rounded-lg text-anthracite-500 transition-colors hover:bg-anthracite-100 hover:text-anthracite-900 disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed;
+  }
+
+  /* Cartes */
+  .card {
+    @apply bg-white border border-anthracite-100 rounded-2xl shadow-sm;
+  }
+
+  /* Badges de statut */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+
+  .badge-running {
+    @apply bg-status-running-soft text-status-running;
+  }
+
+  .badge-stopped {
+    @apply bg-status-stopped-soft text-status-stopped;
+  }
+
+  .badge-restarting {
+    @apply bg-status-restarting-soft text-status-restarting;
+  }
+
+  .badge-error {
+    @apply bg-status-error-soft text-status-error;
+  }
+}
