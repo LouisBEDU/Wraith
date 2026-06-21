@@ -285,22 +285,22 @@ export default function Ports() {
                 <table className="flex min-h-0 flex-1 flex-col text-sm">
                   <thead className="block shrink-0">
                     <tr className="flex items-center bg-anthracite-50 text-left text-xs uppercase tracking-wide text-anthracite-500 pr-2">
-                      <th className="px-5 py-3 font-medium w-20 shrink-0 truncate">{t("ports.colPort")}</th>
+                      <th className="px-5 py-3 font-medium w-30 shrink-0 truncate">{t("ports.colPort")}</th>
                       <th className="px-5 py-3 font-medium w-28 shrink-0 truncate">{t("ports.colProtocol")}</th>
-                      <th className="px-5 py-3 font-medium flex-1 min-w-0 truncate">{t("ports.colRule")}</th>
+                      <th className="px-5 py-3 font-medium flex-1 min-w-50 truncate">{t("ports.colRule")}</th>
                       <th className="px-5 py-3 font-medium w-24 shrink-0 text-right truncate">{t("ports.colActions")}</th>
                     </tr>
                   </thead>
-                  <tbody className="block flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable] divide-y divide-anthracite-100">
+                  <tbody className="block flex-1 min-h-0 overflow-y-auto scrollbar-gutter-stable divide-y divide-anthracite-100">
                     {rules.map((rule) => (
                       <tr key={rule.id} className="flex items-center hover:bg-paper-dim transition-colors">
-                        <td className="px-5 py-3 font-medium text-anthracite-900 w-20 shrink-0">
+                        <td className="px-5 py-3 font-medium text-anthracite-900 w-30 shrink-0 truncate" title={rule.port}>
                           {rule.port}
                         </td>
                         <td className="px-5 py-3 uppercase text-anthracite-500 w-28 shrink-0">
                           {rule.protocol}
                         </td>
-                        <td className="px-5 py-3 text-anthracite-500 flex-1 min-w-0">
+                        <td className="px-5 py-3 text-anthracite-500 flex-1 min-w-50">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="truncate" title={rule.label}>
                               {rule.label}
