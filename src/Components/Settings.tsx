@@ -45,9 +45,21 @@ export default function Settings() {
 
   async function handleSave() {
     if (!settings) return;
-    setSaving(true);
     const settingNewPassword = passwordInput !== "";
     const willHaveNoPassword = !settings.has_password && !settingNewPassword;
+
+    if (!Number.isInteger(settings.port) || settings.port < 1 || settings.port > 65535) {
+      toast.error(t("settings.toastInvalidPort"));
+      return;
+    }
+    // L'accès web pilote Docker sur le réseau : on refuse de l'activer sans
+    // mot de passe (le backend applique aussi cette règle).
+    if (settings.enabled && willHaveNoPassword) {
+      toast.error(t("settings.toastPasswordRequired"));
+      return;
+    }
+
+    setSaving(true);
     try {
       await saveWebServerSettings({
         enabled: settings.enabled,
@@ -59,11 +71,7 @@ export default function Settings() {
         setSettings({ ...settings, has_password: true });
         setPasswordInput("");
       }
-      if (settings.enabled && willHaveNoPassword) {
-        toast.warning(t("settings.toastSavedNoPassword"));
-      } else {
-        toast.success(t("settings.toastSaved"));
-      }
+      toast.success(t("settings.toastSaved"));
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -73,6 +81,12 @@ export default function Settings() {
 
   async function handleClearPassword() {
     if (!settings) return;
+    // Impossible de retirer le mot de passe tant que l'accès web est actif :
+    // il faut d'abord désactiver l'accès web.
+    if (settings.enabled) {
+      toast.error(t("settings.toastPasswordRequired"));
+      return;
+    }
     setSaving(true);
     try {
       await saveWebServerSettings({

@@ -1,6 +1,7 @@
 use crate::docker;
 use std::collections::HashMap;
 use std::io::Read;
+use std::net::IpAddr;
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -10,11 +11,23 @@ use tiny_http::{Header, Method, Response, Server, StatusCode};
 const SESSION_TTL: Duration = Duration::from_secs(60 * 60 * 24);
 const MAX_LOGIN_BODY_BYTES: u64 = 4096;
 
+// Anti-brute-force : au-delà de MAX_LOGIN_FAILURES échecs consécutifs depuis
+// une même IP, on bloque les tentatives de cette IP pendant LOGIN_LOCKOUT.
+const MAX_LOGIN_FAILURES: u32 = 5;
+const LOGIN_LOCKOUT: Duration = Duration::from_secs(60);
+
+#[derive(Default)]
+struct LoginGuard {
+    failures: u32,
+    locked_until: Option<Instant>,
+}
+
 #[derive(Default)]
 pub struct RuntimeConfig {
     pub enabled: bool,
     pub password_hash: String,
     pub sessions: HashMap<String, Instant>,
+    login_guards: HashMap<IpAddr, LoginGuard>,
 }
 
 pub type SharedConfig = Arc<Mutex<RuntimeConfig>>;
@@ -144,10 +157,20 @@ fn session_token(request: &tiny_http::Request) -> Option<String> {
         .map(|v| v.to_string())
 }
 
+fn client_ip(request: &tiny_http::Request) -> IpAddr {
+    request
+        .remote_addr()
+        .map(|addr| addr.ip())
+        .unwrap_or(IpAddr::from([0, 0, 0, 0]))
+}
+
 fn is_authorized(request: &tiny_http::Request, config: &SharedConfig) -> bool {
     let cfg = config.lock().unwrap();
+    // Sans mot de passe configuré, le serveur ne doit jamais accorder d'accès :
+    // l'invariant (cf. settings::save / apply_web_server_state) interdit
+    // d'activer l'accès web sans mot de passe, ceci en est le filet de sécurité.
     if cfg.password_hash.is_empty() {
-        return true;
+        return false;
     }
     match session_token(request) {
         Some(token) => cfg
@@ -216,16 +239,42 @@ fn handle_login(mut request: tiny_http::Request, config: &SharedConfig) {
         .and_then(|v| v.get("password").and_then(|p| p.as_str()).map(str::to_string))
         .unwrap_or_default();
 
+    let ip = client_ip(&request);
+
+    // Phase 1 : vérifier le verrouillage anti-brute-force et récupérer le hash,
+    // puis relâcher le Mutex avant le calcul Argon2 (coûteux) pour ne pas bloquer
+    // les autres requêtes pendant la vérification.
+    let password_hash = {
+        let cfg = config.lock().unwrap();
+        let now = Instant::now();
+        if let Some(guard) = cfg.login_guards.get(&ip) {
+            if guard.locked_until.is_some_and(|until| until > now) {
+                drop(cfg);
+                let _ = request.respond(json_response(serde_json::json!({ "ok": false }), 429));
+                return;
+            }
+        }
+        cfg.password_hash.clone()
+    };
+
+    let ok = crate::settings::verify_password(&password_hash, &submitted);
+
     let mut cfg = config.lock().unwrap();
-    let ok = crate::settings::verify_password(&cfg.password_hash, &submitted);
+    let now = Instant::now();
 
     if !ok {
+        let guard = cfg.login_guards.entry(ip).or_default();
+        guard.failures += 1;
+        if guard.failures >= MAX_LOGIN_FAILURES {
+            guard.failures = 0;
+            guard.locked_until = Some(now + LOGIN_LOCKOUT);
+        }
         drop(cfg);
         let _ = request.respond(json_response(serde_json::json!({ "ok": false }), 401));
         return;
     }
 
-    let now = Instant::now();
+    cfg.login_guards.remove(&ip);
     cfg.sessions
         .retain(|_, created| now.duration_since(*created) < SESSION_TTL);
 
@@ -277,6 +326,9 @@ fn handle_static(request: tiny_http::Request, url: &str, frontend_dir: &Path) {
     let relative_path = Path::new(relative);
 
     let is_safe = !relative_path.is_absolute()
+        && !relative
+            .bytes()
+            .any(|b| b == b'\\' || b == b'\0')
         && !relative_path
             .components()
             .any(|component| matches!(component, Component::ParentDir));
@@ -286,11 +338,23 @@ fn handle_static(request: tiny_http::Request, url: &str, frontend_dir: &Path) {
         return;
     }
 
-    let mut path = frontend_dir.join(relative_path);
+    // `base` est la racine canonique du frontend. On résout le chemin demandé et
+    // on vérifie qu'il reste sous `base` : cela neutralise toute évasion (chemins
+    // enracinés Windows comme `\windows\...`, liens symboliques, etc.) que
+    // `join` pourrait faire pointer hors du dossier servi.
+    let base = match frontend_dir.canonicalize() {
+        Ok(base) => base,
+        Err(_) => {
+            let _ = request.respond(text_response(MISSING_BUILD_MESSAGE, 503));
+            return;
+        }
+    };
 
-    if !path.is_file() {
-        path = frontend_dir.join("index.html");
-    }
+    let fallback = base.join("index.html");
+    let path = match base.join(relative_path).canonicalize() {
+        Ok(resolved) if resolved.starts_with(&base) && resolved.is_file() => resolved,
+        _ => fallback,
+    };
 
     if !path.is_file() {
         let _ = request.respond(text_response(MISSING_BUILD_MESSAGE, 503));

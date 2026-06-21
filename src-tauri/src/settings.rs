@@ -93,6 +93,16 @@ pub fn save(app: &AppHandle, input: &WebServerSettingsInput) -> Result<WebServer
         };
     }
 
+    if current.port == 0 {
+        return Err("Le port doit être compris entre 1 et 65535.".into());
+    }
+
+    // L'accès web donne le contrôle total de Docker (≈ root sur l'hôte) sur le
+    // réseau : on refuse de l'activer sans mot de passe.
+    if current.enabled && current.password_hash.is_empty() {
+        return Err("Un mot de passe est requis pour activer l'accès web.".into());
+    }
+
     write(app, &current)?;
     Ok(current)
 }
@@ -107,7 +117,7 @@ fn hash_password(password: &str) -> Result<String, String> {
 
 pub fn verify_password(password_hash: &str, candidate: &str) -> bool {
     if password_hash.is_empty() {
-        return true;
+        return false;
     }
     let Ok(parsed) = PasswordHash::new(password_hash) else {
         return false;

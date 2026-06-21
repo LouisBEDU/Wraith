@@ -44,16 +44,21 @@ fn apply_web_server_state(app: &AppHandle, settings: &WebServerSettings) -> Resu
         .run_in_background
         .store(settings.run_in_background, Ordering::SeqCst);
 
+    // L'accès web n'est démarré que s'il est activé ET protégé par un mot de
+    // passe (cf. settings::save). On neutralise ainsi tout réglage hérité où
+    // `enabled` aurait été vrai sans mot de passe configuré.
+    let should_run = settings.enabled && !settings.password_hash.is_empty();
+
     let mut guard = state.handle.lock().unwrap();
     let already_on_port = guard.as_ref().is_some_and(|h| h.port == settings.port);
 
-    if settings.enabled && !already_on_port {
+    if should_run && !already_on_port {
         if let Some(handle) = guard.take() {
             handle.stop();
         }
         let handle = web_server::start(settings.port, frontend_dir(app), state.config.clone())?;
         *guard = Some(handle);
-    } else if !settings.enabled {
+    } else if !should_run {
         if let Some(handle) = guard.take() {
             handle.stop();
         }
