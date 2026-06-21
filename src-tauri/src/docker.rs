@@ -45,6 +45,46 @@ pub fn available() -> bool {
         .unwrap_or(false)
 }
 
+fn to_owned(args: &[&str]) -> Vec<String> {
+    args.iter().map(|s| s.to_string()).collect()
+}
+
+pub fn ps_args() -> Vec<String> {
+    to_owned(&["ps", "--all", "--format", "json"])
+}
+pub fn start_args(id: &str) -> Vec<String> {
+    vec!["start".into(), id.into()]
+}
+pub fn stop_args(id: &str) -> Vec<String> {
+    vec!["stop".into(), id.into()]
+}
+pub fn restart_args(id: &str) -> Vec<String> {
+    vec!["restart".into(), id.into()]
+}
+pub fn remove_args(id: &str) -> Vec<String> {
+    vec!["rm".into(), "--force".into(), id.into()]
+}
+pub fn logs_args(id: &str) -> Vec<String> {
+    vec![
+        "logs".into(),
+        "--tail".into(),
+        LOGS_TAIL_LINES.into(),
+        "--timestamps".into(),
+        id.into(),
+    ]
+}
+
+pub fn run_local(args: &[String]) -> Result<String, String> {
+    let refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    run_docker_command(&refs)
+}
+
+pub fn merge_logs(stdout: &str, stderr: &str) -> String {
+    let mut lines: Vec<&str> = stdout.lines().chain(stderr.lines()).collect();
+    lines.sort_by(|a, b| timestamp_key(a).cmp(timestamp_key(b)));
+    lines.join("\n")
+}
+
 pub fn ps() -> Result<String, String> {
     run_docker_command(&["ps", "--all", "--format", "json"])
 }
@@ -68,13 +108,10 @@ pub fn remove(id: &str) -> Result<String, String> {
 const LOGS_TAIL_LINES: &str = "300";
 
 pub fn logs(id: &str) -> Result<String, String> {
-    let args = ["logs", "--tail", LOGS_TAIL_LINES, "--timestamps", id];
+    let args = logs_args(id);
+    let refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
-    if cfg!(debug_assertions) {
-        println!("docker::logs() - Executing 'docker {}'...", args.join(" "));
-    }
-
-    let output = build_command(&args).output().map_err(|e| e.to_string())?;
+    let output = build_command(&refs).output().map_err(|e| e.to_string())?;
 
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
@@ -82,10 +119,7 @@ pub fn logs(id: &str) -> Result<String, String> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let mut lines: Vec<&str> = stdout.lines().chain(stderr.lines()).collect();
-    lines.sort_by(|a, b| timestamp_key(a).cmp(timestamp_key(b)));
-
-    Ok(lines.join("\n"))
+    Ok(merge_logs(&stdout, &stderr))
 }
 
 fn timestamp_key(line: &str) -> &str {

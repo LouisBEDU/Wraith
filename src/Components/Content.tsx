@@ -8,6 +8,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import LogsDialog from "./LogsDialog";
 import { RefreshIcon } from "./icons";
 import { useToast } from "../lib/toast";
+import { useConnections } from "../lib/connections";
 
 const ACTION_TOAST_KEY: Record<ContainerAction, string> = {
   start: "content.toastStart",
@@ -19,6 +20,7 @@ const ACTION_TOAST_KEY: Record<ContainerAction, string> = {
 export default function Content() {
   const { t } = useTranslation();
   const toast = useToast();
+  const { activeId } = useConnections();
   const [containers, setContainers] = useState<DockerContainer[]>([]);
   const [loading, setLoading] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export default function Content() {
 
   useEffect(() => {
     loadContainers().catch((err) => toast.error(String(err)));
-  }, [loadContainers]);
+  }, [loadContainers, activeId]);
 
   async function handleRefresh() {
     try {
@@ -78,7 +80,7 @@ export default function Content() {
 
   return (
     <div className="flex-1 min-h-0 min-w-0 overflow-y-auto p-4 sm:p-6 flex flex-col gap-5 sm:gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 shrink-0 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-anthracite-900">{t("content.title")}</h1>
           <p className="text-sm text-anthracite-500 mt-0.5">{t("content.subtitle")}</p>
@@ -94,7 +96,9 @@ export default function Content() {
         </button>
       </div>
 
-      <StatsCards containers={containers} />
+      <div className="shrink-0">
+        <StatsCards containers={containers} />
+      </div>
       <ContainersTable
         containers={containers}
         pendingId={pendingId}

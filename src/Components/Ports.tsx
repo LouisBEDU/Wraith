@@ -10,15 +10,15 @@ import {
 import type { FirewallRule } from "../types/firewall";
 import { useToast } from "../lib/toast";
 import { useSystemTools } from "../lib/systemTools";
+import { useConnections } from "../lib/connections";
 import ConfirmDialog from "./ConfirmDialog";
+import DataTable, { type DataTableColumn } from "./DataTable";
 import {
   AlertTriangleIcon,
-  CheckCircleIcon,
   FirewallIcon,
   PlusIcon,
   RefreshIcon,
   TrashIcon,
-  XCircleIcon,
 } from "./icons";
 
 type Protocol = "tcp" | "udp";
@@ -27,6 +27,7 @@ export default function Ports() {
   const { t } = useTranslation();
   const toast = useToast();
   const { tools, refresh: refreshTools } = useSystemTools();
+  const { activeId } = useConnections();
   const [rules, setRules] = useState<FirewallRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [portInput, setPortInput] = useState("");
@@ -56,11 +57,59 @@ export default function Ports() {
       return;
     }
     load();
-  }, [load]);
+  }, [load, activeId]);
 
   const firewall = tools?.firewall ?? null;
   const ssh = tools?.ssh ?? null;
   const canManage = Boolean(firewall?.available && firewall?.manageable);
+
+  const ruleColumns: DataTableColumn<FirewallRule>[] = [
+    {
+      id: "port",
+      header: t("ports.colPort"),
+      className: "whitespace-nowrap",
+      cell: (rule) => <span className="font-medium text-anthracite-900">{rule.port}</span>,
+    },
+    {
+      id: "protocol",
+      header: t("ports.colProtocol"),
+      className: "whitespace-nowrap",
+      cell: (rule) => <span className="uppercase text-anthracite-500">{rule.protocol}</span>,
+    },
+    {
+      id: "rule",
+      header: t("ports.colRule"),
+      cell: (rule) => (
+        <div className="flex items-center gap-2">
+          <span className="max-w-64 truncate text-anthracite-500" title={rule.label}>
+            {rule.label}
+          </span>
+          <span className={`badge shrink-0 ${rule.managed ? "badge-running" : "badge-restarting"}`}>
+            {rule.managed ? t("ports.managedBadge") : t("ports.systemBadge")}
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: t("ports.colActions"),
+      align: "right",
+      className: "whitespace-nowrap",
+      cell: (rule) => (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            title={t("ports.close")}
+            className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
+            disabled={!canManage || pendingId === rule.id}
+            onClick={() => setPendingDelete(rule)}
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   async function handleOpen(e: FormEvent) {
     e.preventDefault();
@@ -145,43 +194,7 @@ export default function Ports() {
         <p className="text-sm text-anthracite-500">{t("ports.loading")}</p>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 shrink-0">
-          {firewall && (
-            <div className="card p-5 flex flex-col gap-3">
-              <span className="text-sm font-medium text-anthracite-900">{t("ports.statusTitle")}</span>
-              <ToolRow
-                label={t("ports.dockerLabel")}
-                ok={Boolean(tools?.docker)}
-                okText={t("ports.installed")}
-                koText={t("ports.notDetected")}
-              />
-              <ToolRow
-                label={t("ports.firewallLabel", { backend: firewall.backend })}
-                ok={firewall.available}
-                okText={
-                  firewall.enabled === null
-                    ? t("ports.installed")
-                    : firewall.enabled
-                      ? t("ports.firewallActive")
-                      : t("ports.firewallInactive")
-                }
-                koText={t("ports.notDetected")}
-              />
-              {firewall.message && (
-                <p className="flex items-start gap-2 text-xs text-anthracite-500">
-                  <AlertTriangleIcon className="h-4 w-4 shrink-0 text-status-restarting" />
-                  {firewall.message}
-                </p>
-              )}
-              {firewall.needs_privileges && canManage && (
-                <p className="flex items-start gap-2 text-xs text-anthracite-400">
-                  <AlertTriangleIcon className="h-4 w-4 shrink-0" />
-                  {t("ports.privilegeNote")}
-                </p>
-              )}
-            </div>
-          )}
-
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 shrink-0">
           {ssh && (
             <div className="card p-5 flex flex-col gap-4">
               <div>
@@ -274,63 +287,20 @@ export default function Ports() {
           )}
           </div>
 
-          {firewall?.available &&
-            (rules.length === 0 ? (
-              <div className="card flex flex-1 min-h-64 flex-col items-center justify-center gap-3 py-16 text-anthracite-400">
-                <FirewallIcon className="h-9 w-9" />
-                <p className="text-sm">{t("ports.tableEmpty")}</p>
-              </div>
-            ) : (
-              <div className="card flex flex-1 min-h-64 flex-col overflow-hidden">
-                <table className="flex min-h-0 flex-1 flex-col text-sm">
-                  <thead className="block shrink-0">
-                    <tr className="flex items-center bg-anthracite-50 text-left text-xs uppercase tracking-wide text-anthracite-500 pr-2">
-                      <th className="px-5 py-3 font-medium w-30 shrink-0 truncate">{t("ports.colPort")}</th>
-                      <th className="px-5 py-3 font-medium w-28 shrink-0 truncate">{t("ports.colProtocol")}</th>
-                      <th className="px-5 py-3 font-medium flex-1 min-w-50 truncate">{t("ports.colRule")}</th>
-                      <th className="px-5 py-3 font-medium w-24 shrink-0 text-right truncate">{t("ports.colActions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="block flex-1 min-h-0 overflow-y-auto scrollbar-gutter-stable divide-y divide-anthracite-100">
-                    {rules.map((rule) => (
-                      <tr key={rule.id} className="flex items-center hover:bg-paper-dim transition-colors">
-                        <td className="px-5 py-3 font-medium text-anthracite-900 w-30 shrink-0 truncate" title={rule.port}>
-                          {rule.port}
-                        </td>
-                        <td className="px-5 py-3 uppercase text-anthracite-500 w-28 shrink-0">
-                          {rule.protocol}
-                        </td>
-                        <td className="px-5 py-3 text-anthracite-500 flex-1 min-w-50">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="truncate" title={rule.label}>
-                              {rule.label}
-                            </span>
-                            <span
-                              className={`badge shrink-0 ${rule.managed ? "badge-running" : "badge-restarting"}`}
-                            >
-                              {rule.managed ? t("ports.managedBadge") : t("ports.systemBadge")}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3 w-24 shrink-0">
-                          <div className="flex items-center justify-end">
-                            <button
-                              type="button"
-                              title={t("ports.close")}
-                              className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
-                              disabled={!canManage || pendingId === rule.id}
-                              onClick={() => setPendingDelete(rule)}
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
+          {firewall?.available && (
+            <DataTable
+              columns={ruleColumns}
+              rows={rules}
+              rowKey={(rule) => rule.id}
+              minWidth="min-w-120"
+              empty={
+                <>
+                  <FirewallIcon className="h-9 w-9" />
+                  <p className="text-sm">{t("ports.tableEmpty")}</p>
+                </>
+              }
+            />
+          )}
         </>
       )}
 
@@ -381,7 +351,7 @@ function Header({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 shrink-0 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 className="text-xl font-semibold text-anthracite-900">{t("ports.title")}</h1>
         <p className="text-sm text-anthracite-500 mt-0.5">{t("ports.subtitle")}</p>
@@ -397,32 +367,6 @@ function Header({
           {t("content.refresh")}
         </button>
       )}
-    </div>
-  );
-}
-
-function ToolRow({
-  label,
-  ok,
-  okText,
-  koText,
-}: {
-  label: string;
-  ok: boolean;
-  okText: string;
-  koText: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-anthracite-600">{label}</span>
-      <span
-        className={`flex items-center gap-1.5 font-medium ${
-          ok ? "text-status-running" : "text-status-error"
-        }`}
-      >
-        {ok ? <CheckCircleIcon className="h-4 w-4" /> : <XCircleIcon className="h-4 w-4" />}
-        {ok ? okText : koText}
-      </span>
     </div>
   );
 }

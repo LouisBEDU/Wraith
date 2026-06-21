@@ -5,13 +5,16 @@ import App from "./Pages/App";
 import { ToastProvider } from "./lib/toast";
 import { UpdateProvider } from "./lib/update";
 import { SystemToolsProvider } from "./lib/systemTools";
+import { ConnectionsProvider } from "./lib/connections";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <ToastProvider>
       <UpdateProvider>
         <SystemToolsProvider>
-          <App />
+          <ConnectionsProvider>
+            <App />
+          </ConnectionsProvider>
         </SystemToolsProvider>
       </UpdateProvider>
     </ToastProvider>

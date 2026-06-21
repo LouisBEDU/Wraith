@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { FirewallRule, SystemTools } from "../types/firewall";
+import type { ConnectionProfile, ConnectionSaveInput } from "../types/connection";
 
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -117,8 +118,6 @@ export async function logout(): Promise<void> {
   await fetch("/api/logout", { method: "POST" }).catch(() => {});
 }
 
-// Gestion du pare-feu : desktop uniquement (jamais exposé via le serveur web).
-
 export async function getSystemTools(): Promise<SystemTools> {
   return invoke<SystemTools>("system_tools");
 }
@@ -141,4 +140,56 @@ export async function closeFirewallRule(rule: FirewallRule): Promise<void> {
 
 export async function setSshPort(port: number): Promise<void> {
   await invoke("ssh_set_port", { port });
+}
+
+export type ConnectionTestInput = {
+  host: string;
+  port: number;
+  username: string;
+  authMethod: "key" | "password";
+  secret: string | null;
+  keyPath: string | null;
+};
+
+export async function testConnection(input: ConnectionTestInput): Promise<string> {
+  return invoke<string>("connection_test", {
+    host: input.host,
+    port: input.port,
+    username: input.username,
+    authMethod: input.authMethod,
+    secret: input.secret,
+    keyPath: input.keyPath,
+  });
+}
+
+export async function listConnections(): Promise<ConnectionProfile[]> {
+  return invoke<ConnectionProfile[]>("connections_list");
+}
+
+export async function saveConnection(input: ConnectionSaveInput): Promise<ConnectionProfile> {
+  return invoke<ConnectionProfile>("connection_save", {
+    input: {
+      id: input.id ?? null,
+      name: input.name,
+      host: input.host,
+      port: input.port,
+      username: input.username,
+      auth_method: input.authMethod,
+      key_path: input.keyPath,
+      secret: input.secret,
+      sudo_password: input.sudoPassword,
+    },
+  });
+}
+
+export async function deleteConnection(id: string): Promise<void> {
+  await invoke("connection_delete", { id });
+}
+
+export async function setActiveConnection(id: string | null): Promise<void> {
+  await invoke("set_active_connection", { id });
+}
+
+export async function getActiveConnection(): Promise<string | null> {
+  return invoke<string | null>("get_active_connection");
 }

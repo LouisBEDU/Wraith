@@ -1,10 +1,3 @@
-//! Gestion multi-plateforme du pare-feu (ports entrants autorisés).
-//!
-//! - Windows : pare-feu Windows via `netsh` / cmdlets `*-NetFirewallRule`
-//!   (PowerShell). Les opérations qui modifient les règles sont élevées via UAC.
-//! - Linux   : `ufw`, exécuté via `pkexec` (élévation graphique polkit).
-//! - macOS   : non pris en charge pour l'instant (pf).
-
 use serde::{Deserialize, Serialize};
 
 #[cfg(target_os = "linux")]
@@ -12,42 +5,68 @@ use std::process::Command;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct FirewallStatus {
-    /// Backend détecté : "windows" | "ufw" | "pf" | "none".
     pub backend: String,
-    /// L'outil est présent sur la machine.
     pub available: bool,
-    /// L'app peut ajouter / supprimer des règles sur cette plateforme.
     pub manageable: bool,
-    /// Pare-feu actif (None si indéterminable sans privilèges).
     pub enabled: Option<bool>,
-    /// Les opérations nécessitent une élévation (admin / root).
     pub needs_privileges: bool,
-    /// Message d'information éventuel (outil absent, plateforme non gérée…).
     pub message: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct FirewallRule {
-    /// Identifiant technique servant à supprimer la règle (Name Windows,
-    /// numéro ufw).
     pub id: String,
-    /// Libellé lisible.
     pub label: String,
-    /// Port ou liste/plage de ports (tel que rapporté par l'outil).
     pub port: String,
-    /// Protocole : "tcp" | "udp".
     pub protocol: String,
-    /// Règle créée par Wraith (suppression sans risque).
     pub managed: bool,
 }
 
-#[allow(dead_code)] // non utilisé sur les plateformes sans gestion (macOS…)
+#[allow(dead_code)]
 fn normalize_protocol(protocol: &str) -> Result<&'static str, String> {
     match protocol.to_lowercase().as_str() {
         "tcp" => Ok("tcp"),
         "udp" => Ok("udp"),
         _ => Err("Protocole invalide (tcp ou udp).".into()),
     }
+}
+
+pub fn parse_ufw_rules(raw: &str) -> Vec<FirewallRule> {
+    let mut rules = Vec::new();
+    for line in raw.lines() {
+        let line = line.trim();
+        let Some(rest) = line.strip_prefix('[') else {
+            continue;
+        };
+        let Some((num, body)) = rest.split_once(']') else {
+            continue;
+        };
+        let id = num.trim().to_string();
+        let body = body.trim();
+
+        if !body.contains("ALLOW") {
+            continue;
+        }
+
+        let target = body.split_whitespace().next().unwrap_or("");
+        let (port, protocol) = match target.split_once('/') {
+            Some((p, proto)) => (p.to_string(), proto.to_string()),
+            None => continue,
+        };
+
+        if protocol != "tcp" && protocol != "udp" {
+            continue;
+        }
+
+        rules.push(FirewallRule {
+            id,
+            label: format!("{port}/{protocol}"),
+            port,
+            protocol,
+            managed: true,
+        });
+    }
+    rules
 }
 
 // ───────────────────────────── Windows ─────────────────────────────
@@ -90,8 +109,6 @@ mod platform {
     }
 
     pub fn rules() -> Result<Vec<FirewallRule>, String> {
-        // Jointure règles entrantes "allow" actives ↔ filtres de ports, puis
-        // sortie JSON. On ne garde que les règles TCP/UDP ciblant un port précis.
         let script = r#"
 $rules = Get-NetFirewallRule -Direction Inbound -Action Allow -Enabled True -ErrorAction SilentlyContinue
 $pf = Get-NetFirewallPortFilter -ErrorAction SilentlyContinue
@@ -184,7 +201,6 @@ mod platform {
             .unwrap_or(false)
     }
 
-    /// Exécute `ufw <args>` via pkexec (élévation polkit).
     fn run_ufw(args: &[&str]) -> Result<String, String> {
         if !pkexec_available() {
             return Err("pkexec est requis pour gérer ufw avec des privilèges root.".into());
@@ -206,8 +222,6 @@ mod platform {
             backend: "ufw".into(),
             available,
             manageable: available,
-            // L'état actif d'ufw nécessite root : on l'expose via la liste des
-            // règles (action déclenchée par l'utilisateur), pas au chargement.
             enabled: None,
             needs_privileges: true,
             message: if available {
@@ -224,44 +238,7 @@ mod platform {
         }
 
         let raw = run_ufw(&["status", "numbered"])?;
-        let mut rules = Vec::new();
-
-        // Format : "[ 1] 8080/tcp                   ALLOW IN    Anywhere"
-        for line in raw.lines() {
-            let line = line.trim();
-            let Some(rest) = line.strip_prefix('[') else {
-                continue;
-            };
-            let Some((num, body)) = rest.split_once(']') else {
-                continue;
-            };
-            let id = num.trim().to_string();
-            let body = body.trim();
-
-            if !body.contains("ALLOW") {
-                continue;
-            }
-
-            let target = body.split_whitespace().next().unwrap_or("");
-            let (port, protocol) = match target.split_once('/') {
-                Some((p, proto)) => (p.to_string(), proto.to_string()),
-                None => continue, // ignore les règles sans port/proto explicite
-            };
-
-            if protocol != "tcp" && protocol != "udp" {
-                continue;
-            }
-
-            rules.push(FirewallRule {
-                id,
-                label: format!("{port}/{protocol}"),
-                port,
-                protocol,
-                managed: true,
-            });
-        }
-
-        Ok(rules)
+        Ok(super::parse_ufw_rules(&raw))
     }
 
     pub fn open_port(port: u16, protocol: &str) -> Result<(), String> {
@@ -271,8 +248,6 @@ mod platform {
 
     pub fn close_rule(_id: &str, port: &str, protocol: &str) -> Result<(), String> {
         let proto = normalize_protocol(protocol)?;
-        // On supprime par règle (port/proto) plutôt que par numéro : les numéros
-        // se décalent après chaque suppression.
         let port: u16 = port
             .parse()
             .map_err(|_| "Port invalide pour la suppression.".to_string())?;

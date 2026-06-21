@@ -7,14 +7,25 @@ import {
   saveWebServerSettings,
   type WebServerSettings,
 } from "../lib/api";
+import ConnectionsManager from "./ConnectionsManager";
 import { useToast } from "../lib/toast";
 import { useUpdate } from "../lib/update";
-import { DownloadIcon, EyeIcon, EyeOffIcon, LockIcon, LockOpenIcon } from "./icons";
+import { useSystemTools } from "../lib/systemTools";
+import {
+  CheckCircleIcon,
+  DownloadIcon,
+  EyeIcon,
+  EyeOffIcon,
+  LockIcon,
+  LockOpenIcon,
+  XCircleIcon,
+} from "./icons";
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
   const toast = useToast();
   const update = useUpdate();
+  const { tools } = useSystemTools();
   const [settings, setSettings] = useState<WebServerSettings | null>(null);
   const [passwordInput, setPasswordInput] = useState("");
   const [localIp, setLocalIp] = useState<string | null>(null);
@@ -52,8 +63,6 @@ export default function Settings() {
       toast.error(t("settings.toastInvalidPort"));
       return;
     }
-    // L'accès web pilote Docker sur le réseau : on refuse de l'activer sans
-    // mot de passe (le backend applique aussi cette règle).
     if (settings.enabled && willHaveNoPassword) {
       toast.error(t("settings.toastPasswordRequired"));
       return;
@@ -81,8 +90,6 @@ export default function Settings() {
 
   async function handleClearPassword() {
     if (!settings) return;
-    // Impossible de retirer le mot de passe tant que l'accès web est actif :
-    // il faut d'abord désactiver l'accès web.
     if (settings.enabled) {
       toast.error(t("settings.toastPasswordRequired"));
       return;
@@ -159,6 +166,35 @@ export default function Settings() {
           <option value="fr">{t("settings.languageFrench")}</option>
         </select>
       </div>
+
+      {isTauri && tools && (
+        <div className="card max-w-lg p-5 flex flex-col gap-3">
+          <span className="text-sm font-medium text-anthracite-900">{t("settings.toolsTitle")}</span>
+          <ToolRow
+            label="Docker"
+            ok={tools.docker}
+            okText={t("settings.toolInstalled")}
+            koText={t("settings.toolMissing")}
+          />
+          <ToolRow
+            label={t("settings.toolFirewall", { backend: tools.firewall.backend })}
+            ok={tools.firewall.available}
+            okText={t("settings.toolInstalled")}
+            koText={t("settings.toolMissing")}
+          />
+          <ToolRow
+            label={t("settings.toolSsh")}
+            ok={tools.ssh.installed}
+            okText={t("settings.toolInstalled")}
+            koText={t("settings.toolMissing")}
+          />
+          {tools.firewall.message && (
+            <p className="text-xs text-anthracite-500">{tools.firewall.message}</p>
+          )}
+        </div>
+      )}
+
+      {isTauri && <ConnectionsManager />}
 
       {!isTauri ? (
         <div className="card max-w-lg p-5 text-sm text-anthracite-500">
@@ -302,6 +338,32 @@ export default function Settings() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ToolRow({
+  label,
+  ok,
+  okText,
+  koText,
+}: {
+  label: string;
+  ok: boolean;
+  okText: string;
+  koText: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-anthracite-600">{label}</span>
+      <span
+        className={`flex items-center gap-1.5 font-medium ${
+          ok ? "text-status-running" : "text-status-error"
+        }`}
+      >
+        {ok ? <CheckCircleIcon className="h-4 w-4" /> : <XCircleIcon className="h-4 w-4" />}
+        {ok ? okText : koText}
+      </span>
     </div>
   );
 }

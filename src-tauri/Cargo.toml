@@ -1,6 +1,6 @@
 [package]
 name = "Wraith"
-version = "0.1.4"
+version = "0.1.5"
 description = "A Tauri App"
 authors = ["Dubsinho"]
 edition = "2024"
@@ -29,3 +29,5 @@ local-ip-address = "0.6"
 rand = "0.8"
 argon2 = "0.5"
 rand_core = { version = "0.6", features = ["getrandom"] }
+russh = { version = "0.60", default-features = false, features = ["ring", "flate2", "rsa"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
