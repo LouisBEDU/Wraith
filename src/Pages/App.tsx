@@ -4,6 +4,7 @@ import "./App.css";
 import Content from "../Components/Content";
 import LoginScreen from "../Components/LoginScreen";
 import Navbar, { type Page } from "../Components/Navbar";
+import Ports from "../Components/Ports";
 import Settings from "../Components/Settings";
 import Titlebar from "../Components/Titlebar";
 import { checkSession, isTauri } from "../lib/api";
@@ -46,7 +47,7 @@ export default function App() {
       {isTauri && <Titlebar />}
       <div className="flex-1 min-h-0 flex">
         <Navbar page={page} onNavigate={setPage} />
-        {page === "settings" ? <Settings /> : <Content />}
+        {page === "settings" ? <Settings /> : page === "ports" ? <Ports /> : <Content />}
       </div>
     </main>
   );

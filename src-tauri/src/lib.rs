@@ -1,7 +1,12 @@
 mod docker;
+mod firewall;
 mod settings;
+mod ssh;
 mod web_server;
+#[cfg(target_os = "windows")]
+mod winproc;
 
+use serde::Serialize;
 use settings::WebServerSettings;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -118,6 +123,52 @@ fn get_local_ip() -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
+#[derive(Serialize)]
+struct SystemTools {
+    docker: bool,
+    firewall: firewall::FirewallStatus,
+    ssh: ssh::SshStatus,
+}
+
+#[tauri::command]
+async fn system_tools() -> SystemTools {
+    tauri::async_runtime::spawn_blocking(|| SystemTools {
+        docker: docker::available(),
+        firewall: firewall::status(),
+        ssh: ssh::status(),
+    })
+    .await
+    .expect("la tâche system_tools a paniqué")
+}
+
+#[tauri::command]
+async fn ssh_set_port(port: u16) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || ssh::set_port(port))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn firewall_rules() -> Result<Vec<firewall::FirewallRule>, String> {
+    tauri::async_runtime::spawn_blocking(firewall::rules)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn firewall_open_port(port: u16, protocol: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || firewall::open_port(port, &protocol))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn firewall_close_rule(id: String, port: String, protocol: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || firewall::close_rule(&id, &port, &protocol))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -196,7 +247,12 @@ pub fn run() {
             docker_logs,
             get_web_server_settings,
             save_web_server_settings,
-            get_local_ip
+            get_local_ip,
+            system_tools,
+            firewall_rules,
+            firewall_open_port,
+            firewall_close_rule,
+            ssh_set_port
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

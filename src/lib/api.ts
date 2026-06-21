@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { FirewallRule, SystemTools } from "../types/firewall";
 
 export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -114,4 +115,30 @@ export async function checkSession(): Promise<boolean> {
 
 export async function logout(): Promise<void> {
   await fetch("/api/logout", { method: "POST" }).catch(() => {});
+}
+
+// Gestion du pare-feu : desktop uniquement (jamais exposé via le serveur web).
+
+export async function getSystemTools(): Promise<SystemTools> {
+  return invoke<SystemTools>("system_tools");
+}
+
+export async function getFirewallRules(): Promise<FirewallRule[]> {
+  return invoke<FirewallRule[]>("firewall_rules");
+}
+
+export async function openFirewallPort(port: number, protocol: string): Promise<void> {
+  await invoke("firewall_open_port", { port, protocol });
+}
+
+export async function closeFirewallRule(rule: FirewallRule): Promise<void> {
+  await invoke("firewall_close_rule", {
+    id: rule.id,
+    port: rule.port,
+    protocol: rule.protocol,
+  });
+}
+
+export async function setSshPort(port: number): Promise<void> {
+  await invoke("ssh_set_port", { port });
 }

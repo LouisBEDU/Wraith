@@ -38,6 +38,13 @@ pub fn run_docker_command(args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+pub fn available() -> bool {
+    build_command(&["--version"])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
 pub fn ps() -> Result<String, String> {
     run_docker_command(&["ps", "--all", "--format", "json"])
 }
@@ -75,20 +82,12 @@ pub fn logs(id: &str) -> Result<String, String> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-
-    // `docker logs --timestamps` préfixe chaque ligne d'un horodatage RFC3339.
-    // On fusionne stdout + stderr en triant UNIQUEMENT sur cet horodatage, et de
-    // façon stable : les lignes de même instant (entrées multi-lignes, traces
-    // d'exception) conservent leur ordre d'origine au lieu d'être réordonnées
-    // alphabétiquement par leur contenu.
     let mut lines: Vec<&str> = stdout.lines().chain(stderr.lines()).collect();
     lines.sort_by(|a, b| timestamp_key(a).cmp(timestamp_key(b)));
 
     Ok(lines.join("\n"))
 }
 
-/// Renvoie l'horodatage en tête de ligne (jusqu'au premier espace), ou la ligne
-/// entière si aucun espace n'est présent.
 fn timestamp_key(line: &str) -> &str {
     line.split_once(' ').map(|(ts, _)| ts).unwrap_or(line)
 }

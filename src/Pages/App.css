@@ -181,6 +181,20 @@
     @apply flex w-full items-center gap-3 rounded-xl px-1 py-2.5 text-sm font-medium transition-colors;
   }
 
+  .sidebar-subgroup {
+    @apply mt-1 flex flex-col gap-1 border-l border-white/10;
+
+    margin-left: 1.25rem;
+    padding-left: 0.5rem;
+  }
+  @media (max-width: 1023px) {
+    .sidebar-rail:not(:hover) .sidebar-subgroup {
+      margin-left: 0;
+      padding-left: 0;
+      border-left-color: transparent;
+    }
+  }
+
   .sidebar-icon {
     @apply flex shrink-0 items-center justify-center;
 

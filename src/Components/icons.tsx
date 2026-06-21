@@ -203,6 +203,44 @@ export function InfoCircleIcon({ className = base }: IconProps) {
   );
 }
 
+export function DockerIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="10" width="2.6" height="2.6" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="7.4" y="10" width="2.6" height="2.6" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="10.8" y="10" width="2.6" height="2.6" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="7.4" y="6.6" width="2.6" height="2.6" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M3 14.5h13.6c0 2.5-2 4-4.6 4H8a5 5 0 0 1-5-4Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M16.6 13.6c1.1-1 2.1-.4 2.3 0 .6-.3 1.4-.2 1.6.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function FirewallIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3.5 9.5h17M3.5 14.5h17M9 4.5v5M15 9.5v5M9 14.5v5" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+export function PlusIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function CloseIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">

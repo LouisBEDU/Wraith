@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ChevronRightIcon,
   ContainersIcon,
+  DockerIcon,
+  FirewallIcon,
   ImagesIcon,
   LogoIcon,
   LogsIcon,
@@ -10,10 +13,12 @@ import {
   VolumesIcon,
 } from "./icons";
 import { useUpdate } from "../lib/update";
+import { useSystemTools } from "../lib/systemTools";
+import { isTauri } from "../lib/api";
 
-export type Page = "containers" | "settings";
+export type Page = "containers" | "ports" | "settings";
 
-const navItems = [
+const dockerItems = [
   { labelKey: "nav.containers", icon: ContainersIcon, page: "containers" as const },
   { labelKey: "nav.images", icon: ImagesIcon, page: null },
   { labelKey: "nav.volumes", icon: VolumesIcon, page: null },
@@ -29,8 +34,11 @@ type NavbarProps = {
 export default function Navbar({ page, onNavigate }: NavbarProps) {
   const { t } = useTranslation();
   const update = useUpdate();
+  const { tools } = useSystemTools();
   const listRef = useRef<HTMLUListElement>(null);
   const [hasScrollbar, setHasScrollbar] = useState(false);
+  const [dockerOpen, setDockerOpen] = useState(true);
+  const dockerAvailable = !isTauri || tools === null || tools.docker;
 
   useEffect(() => {
     const el = listRef.current;
@@ -58,35 +66,84 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
         </div>
 
         <ul ref={listRef} className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
-          {navItems.map(({ labelKey, icon: Icon, page: itemPage }, index) => {
-            const active = itemPage !== null && itemPage === page;
-            const label = t(labelKey);
-            return (
-              <li key={`${labelKey}-${index}`}>
-                <button
-                  type="button"
-                  title={label}
-                  disabled={itemPage === null}
-                  onClick={itemPage ? () => onNavigate(itemPage) : undefined}
-                  className={`sidebar-link ${
-                    active ? "bg-accent-600 text-paper" : "text-paper/55 cursor-pointer"
-                  }`}
-                >
-                  <span className="sidebar-icon">
-                    <Icon className="h-5 w-5 shrink-0" />
-                  </span>
-                  <span className="sidebar-fade flex-1 items-center justify-between gap-2">
-                    <span>{label}</span>
-                    {itemPage === null && (
-                      <span className="text-[10px] uppercase tracking-wide text-paper/35 bg-white/5 rounded-full px-2 py-0.5 shrink-0">
-                        {t("nav.soon")}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+          <li>
+            <button
+              type="button"
+              title={dockerAvailable ? "Docker" : t("nav.dockerUnavailable")}
+              disabled={!dockerAvailable}
+              aria-expanded={dockerOpen}
+              onClick={() => setDockerOpen((open) => !open)}
+              className={`sidebar-link ${
+                dockerAvailable ? "text-paper/55 cursor-pointer" : "text-paper/30"
+              }`}
+            >
+              <span className="sidebar-icon">
+                <DockerIcon className="h-5 w-5 shrink-0" />
+              </span>
+              <span className="sidebar-fade flex-1 items-center justify-between gap-2">
+                <span>Docker</span>
+                {dockerAvailable && (
+                  <ChevronRightIcon
+                    className={`h-4 w-4 shrink-0 transition-transform ${
+                      dockerOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                )}
+              </span>
+            </button>
+
+            {dockerAvailable && dockerOpen && (
+              <ul className="sidebar-subgroup">
+                {dockerItems.map(({ labelKey, icon: Icon, page: itemPage }, index) => {
+                  const active = itemPage !== null && itemPage === page;
+                  const label = t(labelKey);
+                  return (
+                    <li key={`${labelKey}-${index}`}>
+                      <button
+                        type="button"
+                        title={label}
+                        disabled={itemPage === null}
+                        onClick={itemPage ? () => onNavigate(itemPage) : undefined}
+                        className={`sidebar-link ${
+                          active ? "bg-accent-600 text-paper" : "text-paper/55 cursor-pointer"
+                        }`}
+                      >
+                        <span className="sidebar-icon">
+                          <Icon className="h-4 w-4 shrink-0" />
+                        </span>
+                        <span className="sidebar-fade flex-1 items-center justify-between gap-2">
+                          <span>{label}</span>
+                          {itemPage === null && (
+                            <span className="text-[10px] uppercase tracking-wide text-paper/35 bg-white/5 rounded-full px-2 py-0.5 shrink-0">
+                              {t("nav.soon")}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </li>
+
+          <li>
+            <button
+              type="button"
+              title={t("nav.ports")}
+              onClick={() => onNavigate("ports")}
+              className={`sidebar-link ${
+                page === "ports" ? "bg-accent-600 text-paper" : "text-paper/55 cursor-pointer"
+              }`}
+            >
+              <span className="sidebar-icon">
+                <FirewallIcon className="h-5 w-5 shrink-0" />
+              </span>
+              <span className="sidebar-fade flex-1 items-center justify-between gap-2">
+                <span>{t("nav.ports")}</span>
+              </span>
+            </button>
+          </li>
         </ul>
 
         <div className="px-3 py-4 border-t border-white/10">
