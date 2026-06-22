@@ -9,6 +9,7 @@ import LogsDialog from "./LogsDialog";
 import { RefreshIcon } from "./icons";
 import { useToast } from "../lib/toast";
 import { useConnections } from "../lib/connections";
+import { friendlyDockerError } from "../lib/dockerError";
 
 const ACTION_TOAST_KEY: Record<ContainerAction, string> = {
   start: "content.toastStart",
@@ -38,15 +39,15 @@ export default function Content() {
   }, []);
 
   useEffect(() => {
-    loadContainers().catch((err) => toast.error(String(err)));
-  }, [loadContainers, activeId]);
+    loadContainers().catch((err) => toast.error(friendlyDockerError(err, t)));
+  }, [loadContainers, activeId, toast, t]);
 
   async function handleRefresh() {
     try {
       await loadContainers();
       toast.success(t("content.toastRefreshed"));
     } catch (err) {
-      toast.error(String(err));
+      toast.error(friendlyDockerError(err, t));
     }
   }
 
@@ -57,7 +58,7 @@ export default function Content() {
       await loadContainers();
       toast.success(t(ACTION_TOAST_KEY[action], { name: container.Names }));
     } catch (err) {
-      toast.error(String(err));
+      toast.error(friendlyDockerError(err, t));
     } finally {
       setPendingId(null);
     }

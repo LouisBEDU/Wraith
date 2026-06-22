@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   closeFirewallRule,
@@ -23,6 +23,36 @@ import {
 
 type Protocol = "tcp" | "udp";
 
+type PortGroup = {
+  key: string;
+  port: string;
+  protocol: string;
+  label: string;
+  managed: boolean;
+  byVersion: Record<string, FirewallRule>;
+};
+
+function groupRules(rules: FirewallRule[]): PortGroup[] {
+  const map = new Map<string, PortGroup>();
+  for (const rule of rules) {
+    const key = `${rule.port}/${rule.protocol}`;
+    let group = map.get(key);
+    if (!group) {
+      group = { key, port: rule.port, protocol: rule.protocol, label: key, managed: false, byVersion: {} };
+      map.set(key, group);
+    }
+    group.byVersion[rule.ip_version] = rule;
+    if (rule.managed) group.managed = true;
+  }
+  return [...map.values()];
+}
+
+const VERSION_LABELS: Record<string, string> = { v4: "IPv4", v6: "IPv6" };
+
+function versionLabel(version: string): string {
+  return VERSION_LABELS[version] ?? version.toUpperCase();
+}
+
 export default function Ports() {
   const { t } = useTranslation();
   const toast = useToast();
@@ -33,8 +63,8 @@ export default function Ports() {
   const [portInput, setPortInput] = useState("");
   const [protocol, setProtocol] = useState<Protocol>("tcp");
   const [opening, setOpening] = useState(false);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<FirewallRule | null>(null);
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PortGroup | null>(null);
   const [sshPortInput, setSshPortInput] = useState("");
   const [settingSsh, setSettingSsh] = useState(false);
   const [pendingSshPort, setPendingSshPort] = useState<number | null>(null);
@@ -62,30 +92,93 @@ export default function Ports() {
   const firewall = tools?.firewall ?? null;
   const ssh = tools?.ssh ?? null;
   const canManage = Boolean(firewall?.available && firewall?.manageable);
+  const ipVersions = firewall?.ip_versions ?? [];
+  const showVersions = ipVersions.length > 1;
 
-  const ruleColumns: DataTableColumn<FirewallRule>[] = [
+  const groups = useMemo(() => groupRules(rules), [rules]);
+
+  async function toggleVersion(group: PortGroup, version: string, present: boolean) {
+    setPendingKey(group.key);
+    try {
+      if (present) {
+        await closeFirewallRule(group.byVersion[version]);
+      } else {
+        await openFirewallPort(Number(group.port), group.protocol, version);
+      }
+      setRules(await getFirewallRules());
+      toast.success(
+        t(present ? "ports.toastVersionClosed" : "ports.toastVersionOpened", {
+          port: group.port,
+          protocol: group.protocol.toUpperCase(),
+          version: versionLabel(version),
+        }),
+      );
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
+  const ruleColumns: DataTableColumn<PortGroup>[] = [
     {
       id: "port",
       header: t("ports.colPort"),
       className: "whitespace-nowrap",
-      cell: (rule) => <span className="font-medium text-anthracite-900">{rule.port}</span>,
+      cell: (group) => <span className="font-medium text-anthracite-900">{group.port}</span>,
     },
     {
       id: "protocol",
       header: t("ports.colProtocol"),
       className: "whitespace-nowrap",
-      cell: (rule) => <span className="uppercase text-anthracite-500">{rule.protocol}</span>,
+      cell: (group) => <span className="uppercase text-anthracite-500">{group.protocol}</span>,
     },
+    ...(showVersions
+      ? [
+          {
+            id: "versions",
+            header: t("ports.colVersions"),
+            className: "whitespace-nowrap",
+            cell: (group: PortGroup) => (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {ipVersions.map((version) => {
+                  const present = Boolean(group.byVersion[version]);
+                  return (
+                    <button
+                      key={version}
+                      type="button"
+                      role="switch"
+                      aria-checked={present}
+                      disabled={!canManage || pendingKey === group.key}
+                      onClick={() => toggleVersion(group, version, present)}
+                      title={t(present ? "ports.versionOn" : "ports.versionOff", {
+                        version: versionLabel(version),
+                      })}
+                      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-40 ${
+                        present
+                          ? "border-status-running bg-status-running-soft text-status-running"
+                          : "border-anthracite-200 text-anthracite-400 hover:border-anthracite-300"
+                      }`}
+                    >
+                      {versionLabel(version)}
+                    </button>
+                  );
+                })}
+              </div>
+            ),
+          } satisfies DataTableColumn<PortGroup>,
+        ]
+      : []),
     {
       id: "rule",
       header: t("ports.colRule"),
-      cell: (rule) => (
+      cell: (group) => (
         <div className="flex items-center gap-2">
-          <span className="max-w-64 truncate text-anthracite-500" title={rule.label}>
-            {rule.label}
+          <span className="max-w-64 truncate text-anthracite-500" title={group.label}>
+            {group.label}
           </span>
-          <span className={`badge shrink-0 ${rule.managed ? "badge-running" : "badge-restarting"}`}>
-            {rule.managed ? t("ports.managedBadge") : t("ports.systemBadge")}
+          <span className={`badge shrink-0 ${group.managed ? "badge-running" : "badge-restarting"}`}>
+            {group.managed ? t("ports.managedBadge") : t("ports.systemBadge")}
           </span>
         </div>
       ),
@@ -95,14 +188,14 @@ export default function Ports() {
       header: t("ports.colActions"),
       align: "right",
       className: "whitespace-nowrap",
-      cell: (rule) => (
+      cell: (group) => (
         <div className="flex items-center justify-end">
           <button
             type="button"
             title={t("ports.close")}
             className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
-            disabled={!canManage || pendingId === rule.id}
-            onClick={() => setPendingDelete(rule)}
+            disabled={!canManage || pendingKey === group.key}
+            onClick={() => setPendingDelete(group)}
           >
             <TrashIcon className="h-4 w-4" />
           </button>
@@ -133,19 +226,24 @@ export default function Ports() {
 
   async function confirmClose() {
     if (!pendingDelete) return;
-    const rule = pendingDelete;
+    const group = pendingDelete;
     setPendingDelete(null);
-    setPendingId(rule.id);
+    setPendingKey(group.key);
     try {
-      await closeFirewallRule(rule);
+      const toClose = Object.values(group.byVersion).sort(
+        (a, b) => (Number(b.id) || 0) - (Number(a.id) || 0),
+      );
+      for (const rule of toClose) {
+        await closeFirewallRule(rule);
+      }
       toast.success(
-        t("ports.toastClosed", { port: rule.port, protocol: rule.protocol.toUpperCase() }),
+        t("ports.toastClosed", { port: group.port, protocol: group.protocol.toUpperCase() }),
       );
       setRules(await getFirewallRules());
     } catch (err) {
       toast.error(String(err));
     } finally {
-      setPendingId(null);
+      setPendingKey(null);
     }
   }
 
@@ -290,8 +388,8 @@ export default function Ports() {
           {firewall?.available && (
             <DataTable
               columns={ruleColumns}
-              rows={rules}
-              rowKey={(rule) => rule.id}
+              rows={groups}
+              rowKey={(group) => group.key}
               minWidth="min-w-120"
               empty={
                 <>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   getLocalIp,
@@ -32,6 +32,7 @@ export default function Settings() {
   const [ipRevealed, setIpRevealed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const baselineRef = useRef<{ enabled: boolean; port: number }>({ enabled: false, port: 0 });
 
   useEffect(() => {
     if (!isTauri) {
@@ -45,6 +46,7 @@ export default function Settings() {
           getLocalIp().catch(() => null),
         ]);
         setSettings(loaded);
+        baselineRef.current = { enabled: loaded.enabled, port: loaded.port };
         setLocalIp(ip);
       } catch (err) {
         toast.error(String(err));
@@ -80,6 +82,7 @@ export default function Settings() {
         setSettings({ ...settings, has_password: true });
         setPasswordInput("");
       }
+      baselineRef.current = { enabled: settings.enabled, port: settings.port };
       toast.success(t("settings.toastSaved"));
     } catch (err) {
       toast.error(String(err));
@@ -106,6 +109,27 @@ export default function Settings() {
       setPasswordInput("");
       toast.info(t("settings.toastPasswordRemoved"));
     } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleToggleBackground() {
+    if (!settings || saving) return;
+    const next = !settings.run_in_background;
+    setSettings({ ...settings, run_in_background: next });
+    setSaving(true);
+    try {
+      await saveWebServerSettings({
+        enabled: baselineRef.current.enabled,
+        port: baselineRef.current.port,
+        run_in_background: next,
+        password: null,
+      });
+      toast.success(t("settings.toastSaved"));
+    } catch (err) {
+      setSettings((s) => (s ? { ...s, run_in_background: !next } : s));
       toast.error(String(err));
     } finally {
       setSaving(false);
@@ -155,89 +179,104 @@ export default function Settings() {
         <p className="text-sm text-anthracite-500 mt-0.5">{t("settings.subtitle")}</p>
       </div>
 
-      <div className="card max-w-lg p-5 flex flex-col gap-3">
-        <span className="text-sm font-medium text-anthracite-900">{t("settings.language")}</span>
-        <select
-          value={currentLang}
-          onChange={(e) => i18n.changeLanguage(e.target.value)}
-          className="rounded-lg border border-anthracite-100 px-3 py-2 text-sm text-anthracite-900 focus:outline-none focus:ring-2 focus:ring-accent-500"
-        >
-          <option value="en">{t("settings.languageEnglish")}</option>
-          <option value="fr">{t("settings.languageFrench")}</option>
-        </select>
-      </div>
-
+      <div className="gap-5 sm:gap-6 md:columns-2 xl:columns-3">
       {isTauri && tools && (
-        <div className="card max-w-lg p-5 flex flex-col gap-3">
-          <span className="text-sm font-medium text-anthracite-900">{t("settings.toolsTitle")}</span>
-          <ToolRow
-            label="Docker"
-            ok={tools.docker}
-            okText={t("settings.toolInstalled")}
-            koText={t("settings.toolMissing")}
-          />
-          <ToolRow
-            label={t("settings.toolFirewall", { backend: tools.firewall.backend })}
-            ok={tools.firewall.available}
-            okText={t("settings.toolInstalled")}
-            koText={t("settings.toolMissing")}
-          />
-          <ToolRow
-            label={t("settings.toolSsh")}
-            ok={tools.ssh.installed}
-            okText={t("settings.toolInstalled")}
-            koText={t("settings.toolMissing")}
-          />
-          {tools.firewall.message && (
-            <p className="text-xs text-anthracite-500">{tools.firewall.message}</p>
+        <SettingsSection title={t("settings.toolsTitle")}>
+          <div className="card p-5 flex flex-col gap-3">
+            <ToolRow
+              label="Docker"
+              ok={tools.docker}
+              okText={t("settings.toolInstalled")}
+              koText={t("settings.toolMissing")}
+            />
+            <ToolRow
+              label={t("settings.toolFirewall", { backend: tools.firewall.backend })}
+              ok={tools.firewall.available}
+              okText={t("settings.toolInstalled")}
+              koText={t("settings.toolMissing")}
+            />
+            <ToolRow
+              label={t("settings.toolSsh")}
+              ok={tools.ssh.installed}
+              okText={t("settings.toolInstalled")}
+              koText={t("settings.toolMissing")}
+            />
+            {tools.firewall.message && (
+              <p className="text-xs text-anthracite-500">{tools.firewall.message}</p>
+            )}
+          </div>
+        </SettingsSection>
+      )}
+      <SettingsSection title={t("settings.generalTitle")} description={t("settings.generalSubtitle")}>
+        <div className="card p-5 flex flex-col gap-5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-anthracite-900">{t("settings.language")}</span>
+            <select
+              value={currentLang}
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              className="rounded-lg border border-anthracite-100 px-3 py-2 text-sm text-anthracite-900 focus:outline-none focus:ring-2 focus:ring-accent-500"
+            >
+              <option value="en">{t("settings.languageEnglish")}</option>
+              <option value="fr">{t("settings.languageFrench")}</option>
+            </select>
+          </label>
+
+          {isTauri && settings && (
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-anthracite-900">
+                  {t("settings.runInBackground")}
+                </p>
+                <p className="text-sm text-anthracite-500 mt-0.5">
+                  {t("settings.runInBackgroundDescription")}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.run_in_background}
+                disabled={saving}
+                onClick={handleToggleBackground}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+                  settings.run_in_background ? "bg-accent-600" : "bg-anthracite-200"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    settings.run_in_background ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
           )}
         </div>
+      </SettingsSection>
+
+      {isTauri && (
+        <SettingsSection title={t("conn.title")} description={t("conn.subtitle")}>
+          <ConnectionsManager />
+        </SettingsSection>
       )}
 
-      {isTauri && <ConnectionsManager />}
-
       {!isTauri ? (
-        <div className="card max-w-lg p-5 text-sm text-anthracite-500">
-          {t("settings.webOnlyDesktop")}
-        </div>
-      ) : loading || !settings ? (
-        <p className="text-sm text-anthracite-500">{t("settings.loading")}</p>
-      ) : (
-        <div className="card max-w-lg p-5 flex flex-col gap-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-anthracite-900">
-                {t("settings.runInBackground")}
-              </p>
-              <p className="text-sm text-anthracite-500 mt-0.5">
-                {t("settings.runInBackgroundDescription")}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={settings.run_in_background}
-              onClick={() =>
-                setSettings({ ...settings, run_in_background: !settings.run_in_background })
-              }
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                settings.run_in_background ? "bg-accent-600" : "bg-anthracite-200"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  settings.run_in_background ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </button>
+        <SettingsSection title={t("settings.webAccessTitle")}>
+          <div className="card p-5 text-sm text-anthracite-500">
+            {t("settings.webOnlyDesktop")}
           </div>
-
+        </SettingsSection>
+      ) : loading || !settings ? (
+        <SettingsSection title={t("settings.webAccessTitle")}>
+          <div className="card p-5 text-sm text-anthracite-500">{t("settings.loading")}</div>
+        </SettingsSection>
+      ) : (
+        <SettingsSection
+          title={t("settings.webAccessTitle")}
+          description={t("settings.webAccessDescription")}
+        >
+        <div className="card p-5 flex flex-col gap-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-anthracite-900">{t("settings.webAccess")}</p>
-              <p className="text-sm text-anthracite-500 mt-0.5">
-                {t("settings.webAccessDescription")}
-              </p>
+              <p className="text-sm font-medium text-anthracite-900">{t("settings.webAccessEnable")}</p>
             </div>
             <button
               type="button"
@@ -337,8 +376,30 @@ export default function Settings() {
             </button>
           </div>
         </div>
+        </SettingsSection>
       )}
+      </div>
     </div>
+  );
+}
+
+function SettingsSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="mb-5 flex break-inside-avoid flex-col gap-3 sm:mb-6">
+      <div className="px-0.5">
+        <h2 className="text-sm font-semibold text-anthracite-900">{title}</h2>
+        {description && <p className="mt-0.5 text-xs text-anthracite-500">{description}</p>}
+      </div>
+      {children}
+    </section>
   );
 }
 

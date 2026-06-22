@@ -126,8 +126,12 @@ export async function getFirewallRules(): Promise<FirewallRule[]> {
   return invoke<FirewallRule[]>("firewall_rules");
 }
 
-export async function openFirewallPort(port: number, protocol: string): Promise<void> {
-  await invoke("firewall_open_port", { port, protocol });
+export async function openFirewallPort(
+  port: number,
+  protocol: string,
+  ipVersion = "any",
+): Promise<void> {
+  await invoke("firewall_open_port", { port, protocol, ipVersion });
 }
 
 export async function closeFirewallRule(rule: FirewallRule): Promise<void> {
@@ -135,6 +139,7 @@ export async function closeFirewallRule(rule: FirewallRule): Promise<void> {
     id: rule.id,
     port: rule.port,
     protocol: rule.protocol,
+    ipVersion: rule.ip_version,
   });
 }
 

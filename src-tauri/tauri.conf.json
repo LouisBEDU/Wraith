@@ -15,7 +15,7 @@
         "title": "Wraith",
         "width": 1200,
         "height": 800,
-        "minWidth": 360,
+        "minWidth": 500,
         "minHeight": 640,
         "decorations": false
       }

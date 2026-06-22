@@ -78,6 +78,11 @@ pub async fn firewall_status(target: &Target) -> FirewallStatus {
         manageable: available,
         enabled,
         needs_privileges: true,
+        ip_versions: if available {
+            vec!["v4".into(), "v6".into()]
+        } else {
+            Vec::new()
+        },
         message: if available {
             None
         } else {
@@ -94,9 +99,14 @@ pub async fn firewall_rules(target: &Target) -> Result<Vec<FirewallRule>, String
     Ok(crate::firewall::parse_ufw_rules(&out.stdout))
 }
 
-pub async fn firewall_open(target: &Target, port: u16, protocol: &str) -> Result<(), String> {
-    let proto = normalize(protocol)?;
-    let out = run_priv(target, &format!("ufw allow {port}/{proto}")).await?;
+pub async fn firewall_open(
+    target: &Target,
+    port: u16,
+    protocol: &str,
+    ip_version: &str,
+) -> Result<(), String> {
+    let args = crate::firewall::ufw_allow_args(port, protocol, ip_version)?;
+    let out = run_priv(target, &format!("ufw {}", args.join(" "))).await?;
     if out.code == 0 {
         Ok(())
     } else {
@@ -104,10 +114,17 @@ pub async fn firewall_open(target: &Target, port: u16, protocol: &str) -> Result
     }
 }
 
-pub async fn firewall_close(target: &Target, port: &str, protocol: &str) -> Result<(), String> {
-    let proto = normalize(protocol)?;
-    let port: u16 = port.parse().map_err(|_| "Port invalide.".to_string())?;
-    let out = run_priv(target, &format!("ufw delete allow {port}/{proto}")).await?;
+pub async fn firewall_close(
+    target: &Target,
+    id: &str,
+    _port: &str,
+    _protocol: &str,
+    _ip_version: &str,
+) -> Result<(), String> {
+    let num: u32 = id
+        .parse()
+        .map_err(|_| "Numéro de règle invalide.".to_string())?;
+    let out = run_priv(target, &format!("ufw --force delete {num}")).await?;
     if out.code == 0 {
         Ok(())
     } else {
@@ -166,13 +183,5 @@ pub async fn ssh_set_port(target: &Target, port: u16) -> Result<(), String> {
         Ok(())
     } else {
         Err(err_message(&out))
-    }
-}
-
-fn normalize(protocol: &str) -> Result<&'static str, String> {
-    match protocol.to_lowercase().as_str() {
-        "tcp" => Ok("tcp"),
-        "udp" => Ok("udp"),
-        _ => Err("Protocole invalide (tcp ou udp).".into()),
     }
 }

@@ -131,12 +131,7 @@ export default function ConnectionsManager() {
   }
 
   return (
-    <div className="card max-w-lg p-5 flex flex-col gap-4">
-      <div>
-        <p className="text-sm font-medium text-anthracite-900">{t("conn.title")}</p>
-        <p className="text-sm text-anthracite-500 mt-0.5">{t("conn.subtitle")}</p>
-      </div>
-
+    <div className="card p-5 flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 rounded-lg border border-anthracite-100 px-3 py-2">
           <div className="min-w-0 flex-1">

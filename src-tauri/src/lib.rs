@@ -339,13 +339,18 @@ async fn firewall_open_port(
     target: State<'_, ActiveTarget>,
     port: u16,
     protocol: String,
+    ip_version: String,
 ) -> Result<(), String> {
     let active = target.conn.lock().unwrap().clone();
     match active {
-        None => tauri::async_runtime::spawn_blocking(move || firewall::open_port(port, &protocol))
-            .await
-            .map_err(|e| e.to_string())?,
-        Some(conn) => remote_admin::firewall_open(&conn.target, port, &protocol).await,
+        None => tauri::async_runtime::spawn_blocking(move || {
+            firewall::open_port(port, &protocol, &ip_version)
+        })
+        .await
+        .map_err(|e| e.to_string())?,
+        Some(conn) => {
+            remote_admin::firewall_open(&conn.target, port, &protocol, &ip_version).await
+        }
     }
 }
 
@@ -355,15 +360,18 @@ async fn firewall_close_rule(
     id: String,
     port: String,
     protocol: String,
+    ip_version: String,
 ) -> Result<(), String> {
     let active = target.conn.lock().unwrap().clone();
     match active {
-        None => {
-            tauri::async_runtime::spawn_blocking(move || firewall::close_rule(&id, &port, &protocol))
-                .await
-                .map_err(|e| e.to_string())?
+        None => tauri::async_runtime::spawn_blocking(move || {
+            firewall::close_rule(&id, &port, &protocol, &ip_version)
+        })
+        .await
+        .map_err(|e| e.to_string())?,
+        Some(conn) => {
+            remote_admin::firewall_close(&conn.target, &id, &port, &protocol, &ip_version).await
         }
-        Some(conn) => remote_admin::firewall_close(&conn.target, &port, &protocol).await,
     }
 }
 

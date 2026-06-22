@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { dockerLogs } from "../lib/api";
+import { friendlyDockerError } from "../lib/dockerError";
 import type { DockerContainer } from "../types/docker";
 import { CheckCircleIcon, CloseIcon, CopyIcon, RefreshIcon, TerminalIcon } from "./icons";
 
@@ -72,11 +73,11 @@ export default function LogsDialog({ container, onClose }: LogsDialogProps) {
       setLogs(raw);
       if (!silent) setError(null);
     } catch (err) {
-      if (!silent) setError(String(err));
+      if (!silent) setError(friendlyDockerError(err, t));
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     atBottomRef.current = atBottom;

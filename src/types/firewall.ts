@@ -4,6 +4,8 @@ export type FirewallStatus = {
   manageable: boolean;
   enabled: boolean | null;
   needs_privileges: boolean;
+  /** Familles d'adresses gérables (ex. ["v4","v6"] pour ufw, ["any"] pour Windows). */
+  ip_versions: string[];
   message: string | null;
 };
 
@@ -12,6 +14,8 @@ export type FirewallRule = {
   label: string;
   port: string;
   protocol: string;
+  /** "v4", "v6" ou "any". */
+  ip_version: string;
   managed: boolean;
 };
 
