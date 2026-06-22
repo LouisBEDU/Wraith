@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronRightIcon,
   ContainersIcon,
+  DiskIcon,
   DockerIcon,
   FirewallIcon,
   ImagesIcon,
   LogoIcon,
-  LogsIcon,
   NetworksIcon,
   ServerIcon,
   SettingsIcon,
@@ -16,16 +16,91 @@ import {
 import { useUpdate } from "../lib/update";
 import { useSystemTools } from "../lib/systemTools";
 import { useConnections } from "../lib/connections";
-import { isTauri } from "../lib/api";
+import { getDiskUsage, isTauri, type DiskUsage } from "../lib/api";
 
-export type Page = "containers" | "ports" | "settings";
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let value = bytes;
+  let i = 0;
+  while (value >= 1024 && i < units.length - 1) {
+    value /= 1024;
+    i += 1;
+  }
+  const rounded = value >= 100 || i === 0 ? Math.round(value) : Number(value.toFixed(1));
+  return `${rounded} ${units[i]}`;
+}
+
+function DiskUsageWidget() {
+  const { t } = useTranslation();
+  const { activeId } = useConnections();
+  const [usage, setUsage] = useState<DiskUsage | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchUsage = () => {
+      getDiskUsage()
+        .then((u) => {
+          if (!cancelled) setUsage(u);
+        })
+        .catch(() => {
+          if (!cancelled) setUsage(null);
+        });
+    };
+    setUsage(null);
+    fetchUsage();
+    // Rafraîchissement périodique : l'espace disque évolue (pulls, logs, builds…).
+    const id = window.setInterval(fetchUsage, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [activeId]);
+
+  if (!usage || usage.total <= 0) return null;
+
+  const usedPct = Math.min(100, Math.max(0, (1 - usage.available / usage.total) * 100));
+  const freePct = 100 - usedPct;
+  const barTone =
+    freePct < 10 ? "bg-status-error" : freePct < 20 ? "bg-status-restarting" : "bg-accent-500";
+  const iconTone =
+    freePct < 10
+      ? "text-status-error"
+      : freePct < 20
+        ? "text-status-restarting"
+        : "text-paper/45";
+  const tooltip = `${formatBytes(usage.available)} ${t("nav.diskFree")} / ${formatBytes(usage.total)}`;
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl px-1 py-1.5" title={tooltip}>
+      <span className="sidebar-icon">
+        <DiskIcon className={`h-5 w-5 shrink-0 ${iconTone}`} />
+      </span>
+      <span className="sidebar-fade min-w-0 flex-1">
+        <span className="flex w-full flex-col gap-1">
+          <span className="flex items-center justify-between gap-2 text-[11px] text-paper/55">
+            <span className="truncate">{t("nav.disk")}</span>
+            <span className="shrink-0 tabular-nums">{formatBytes(usage.available)}</span>
+          </span>
+          <span className="block h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+            <span
+              className={`block h-full rounded-full transition-all ${barTone}`}
+              style={{ width: `${usedPct}%` }}
+            />
+          </span>
+        </span>
+      </span>
+    </div>
+  );
+}
+
+export type Page = "containers" | "images" | "volumes" | "networks" | "ports" | "settings";
 
 const dockerItems = [
   { labelKey: "nav.containers", icon: ContainersIcon, page: "containers" as const },
-  { labelKey: "nav.images", icon: ImagesIcon, page: null },
-  { labelKey: "nav.volumes", icon: VolumesIcon, page: null },
-  { labelKey: "nav.networks", icon: NetworksIcon, page: null },
-  { labelKey: "nav.logs", icon: LogsIcon, page: null },
+  { labelKey: "nav.images", icon: ImagesIcon, page: "images" as const },
+  { labelKey: "nav.volumes", icon: VolumesIcon, page: "volumes" as const },
+  { labelKey: "nav.networks", icon: NetworksIcon, page: "networks" as const },
 ];
 
 type NavbarProps = {
@@ -174,6 +249,7 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
         </ul>
 
         <div className="px-3 py-4 border-t border-white/10">
+          <DiskUsageWidget />
           <button
             type="button"
             title={

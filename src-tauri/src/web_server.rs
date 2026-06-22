@@ -196,6 +196,18 @@ fn handle_api(request: tiny_http::Request, method: &Method, rest: &str, config: 
         return;
     }
 
+    if let (Method::Get, ["disk"]) = (method, segments.as_slice()) {
+        let response = match crate::disk::local() {
+            Ok(usage) => json_response(
+                serde_json::json!({ "total": usage.total, "available": usage.available }),
+                200,
+            ),
+            Err(err) => text_response(err, 500),
+        };
+        let _ = request.respond(response);
+        return;
+    }
+
     let result: Result<Option<String>, String> = match (method, segments.as_slice()) {
         (Method::Get, ["containers"]) => docker::ps().map(Some),
         (Method::Post, ["containers", id, "start"]) => docker::start(id).map(|_| None),
@@ -203,6 +215,18 @@ fn handle_api(request: tiny_http::Request, method: &Method, rest: &str, config: 
         (Method::Post, ["containers", id, "restart"]) => docker::restart(id).map(|_| None),
         (Method::Delete, ["containers", id]) => docker::remove(id).map(|_| None),
         (Method::Get, ["containers", id, "logs"]) => docker::logs(id).map(Some),
+
+        (Method::Get, ["images"]) => docker::images().map(Some),
+        (Method::Post, ["images", "prune"]) => docker::image_prune().map(|_| None),
+        (Method::Delete, ["images", id]) => docker::image_remove(id).map(|_| None),
+
+        (Method::Get, ["volumes"]) => docker::volumes().map(Some),
+        (Method::Post, ["volumes", "prune"]) => docker::volume_prune().map(|_| None),
+        (Method::Delete, ["volumes", name]) => docker::volume_remove(name).map(|_| None),
+
+        (Method::Get, ["networks"]) => docker::networks().map(Some),
+        (Method::Post, ["networks", "prune"]) => docker::network_prune().map(|_| None),
+        (Method::Delete, ["networks", id]) => docker::network_remove(id).map(|_| None),
         _ => {
             let _ = request.respond(text_response("Route inconnue.", 404));
             return;

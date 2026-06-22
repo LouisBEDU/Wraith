@@ -8,7 +8,7 @@ import ConfirmDialog from "./ConfirmDialog";
 import LogsDialog from "./LogsDialog";
 import { RefreshIcon } from "./icons";
 import { useToast } from "../lib/toast";
-import { useConnections } from "../lib/connections";
+import { useResource } from "../lib/dockerData";
 import { friendlyDockerError } from "../lib/dockerError";
 
 const ACTION_TOAST_KEY: Record<ContainerAction, string> = {
@@ -21,30 +21,20 @@ const ACTION_TOAST_KEY: Record<ContainerAction, string> = {
 export default function Content() {
   const { t } = useTranslation();
   const toast = useToast();
-  const { activeId } = useConnections();
-  const [containers, setContainers] = useState<DockerContainer[]>([]);
-  const [loading, setLoading] = useState(false);
+  const loadContainers = useCallback(async () => parseDockerPs(await dockerPs()), []);
+  const { data, loading, error, reload } = useResource<DockerContainer>("containers", loadContainers);
+  const containers = data ?? [];
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<DockerContainer | null>(null);
   const [logsContainer, setLogsContainer] = useState<DockerContainer | null>(null);
 
-  const loadContainers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await dockerPs();
-      setContainers(parseDockerPs(result));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadContainers().catch((err) => toast.error(friendlyDockerError(err, t)));
-  }, [loadContainers, activeId, toast, t]);
+    if (error) toast.error(friendlyDockerError(error, t));
+  }, [error, toast, t]);
 
   async function handleRefresh() {
     try {
-      await loadContainers();
+      await reload();
       toast.success(t("content.toastRefreshed"));
     } catch (err) {
       toast.error(friendlyDockerError(err, t));
@@ -55,7 +45,7 @@ export default function Content() {
     setPendingId(container.ID);
     try {
       await dockerAction(action, container.ID);
-      await loadContainers();
+      await reload();
       toast.success(t(ACTION_TOAST_KEY[action], { name: container.Names }));
     } catch (err) {
       toast.error(friendlyDockerError(err, t));
@@ -103,6 +93,7 @@ export default function Content() {
       <ContainersTable
         containers={containers}
         pendingId={pendingId}
+        loading={loading}
         onAction={handleAction}
         onShowLogs={setLogsContainer}
       />

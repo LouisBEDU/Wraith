@@ -74,6 +74,38 @@ pub fn logs_args(id: &str) -> Vec<String> {
     ]
 }
 
+// ─── Images / Volumes / Réseaux : arguments (chemin distant via docker_exec) ───
+
+pub fn images_args() -> Vec<String> {
+    to_owned(&["images", "--format", "json"])
+}
+pub fn image_remove_args(id: &str) -> Vec<String> {
+    vec!["rmi".into(), "--force".into(), id.into()]
+}
+pub fn image_prune_args() -> Vec<String> {
+    to_owned(&["image", "prune", "--force"])
+}
+
+pub fn volumes_args() -> Vec<String> {
+    to_owned(&["volume", "ls", "--format", "json"])
+}
+pub fn volume_remove_args(name: &str) -> Vec<String> {
+    vec!["volume".into(), "rm".into(), "--force".into(), name.into()]
+}
+pub fn volume_prune_args() -> Vec<String> {
+    to_owned(&["volume", "prune", "--force"])
+}
+
+pub fn networks_args() -> Vec<String> {
+    to_owned(&["network", "ls", "--format", "json"])
+}
+pub fn network_remove_args(id: &str) -> Vec<String> {
+    vec!["network".into(), "rm".into(), id.into()]
+}
+pub fn network_prune_args() -> Vec<String> {
+    to_owned(&["network", "prune", "--force"])
+}
+
 pub fn run_local(args: &[String]) -> Result<String, String> {
     let refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     run_docker_command(&refs)
@@ -103,6 +135,38 @@ pub fn restart(id: &str) -> Result<String, String> {
 
 pub fn remove(id: &str) -> Result<String, String> {
     run_docker_command(&["rm", "--force", id])
+}
+
+// ─── Images / Volumes / Réseaux : exécution locale (serveur web) ───
+
+pub fn images() -> Result<String, String> {
+    run_local(&images_args())
+}
+pub fn image_remove(id: &str) -> Result<String, String> {
+    run_local(&image_remove_args(id))
+}
+pub fn image_prune() -> Result<String, String> {
+    run_local(&image_prune_args())
+}
+
+pub fn volumes() -> Result<String, String> {
+    run_local(&volumes_args())
+}
+pub fn volume_remove(name: &str) -> Result<String, String> {
+    run_local(&volume_remove_args(name))
+}
+pub fn volume_prune() -> Result<String, String> {
+    run_local(&volume_prune_args())
+}
+
+pub fn networks() -> Result<String, String> {
+    run_local(&networks_args())
+}
+pub fn network_remove(id: &str) -> Result<String, String> {
+    run_local(&network_remove_args(id))
+}
+pub fn network_prune() -> Result<String, String> {
+    run_local(&network_prune_args())
 }
 
 const LOGS_TAIL_LINES: &str = "300";

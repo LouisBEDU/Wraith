@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { getSystemTools, isTauri } from "./api";
+import { useConnections } from "./connections";
 import type { SystemTools } from "../types/firewall";
 
 type SystemToolsContextValue = {
@@ -18,6 +19,7 @@ type SystemToolsContextValue = {
 const SystemToolsContext = createContext<SystemToolsContextValue | null>(null);
 
 export function SystemToolsProvider({ children }: { children: ReactNode }) {
+  const { activeId } = useConnections();
   const [tools, setTools] = useState<SystemTools | null>(null);
   const [loading, setLoading] = useState(isTauri);
 
@@ -41,7 +43,7 @@ export function SystemToolsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+  }, [refresh, activeId]);
 
   return (
     <SystemToolsContext.Provider value={{ tools, loading, refresh }}>

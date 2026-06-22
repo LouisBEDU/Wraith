@@ -1,4 +1,5 @@
 mod connections;
+mod disk;
 mod docker;
 mod firewall;
 mod remote;
@@ -177,6 +178,68 @@ async fn docker_logs(target: State<'_, ActiveTarget>, id: String) -> Result<Stri
             let out = remote_admin::docker_run(&conn.target, &cmd).await?;
             Ok(docker::merge_logs(&out.stdout, &out.stderr))
         }
+    }
+}
+
+// ─── Images ───
+
+#[tauri::command]
+async fn docker_images(target: State<'_, ActiveTarget>) -> Result<String, String> {
+    docker_exec(&target, docker::images_args()).await
+}
+
+#[tauri::command]
+async fn docker_image_remove(target: State<'_, ActiveTarget>, id: String) -> Result<String, String> {
+    docker_exec(&target, docker::image_remove_args(&id)).await
+}
+
+#[tauri::command]
+async fn docker_image_prune(target: State<'_, ActiveTarget>) -> Result<String, String> {
+    docker_exec(&target, docker::image_prune_args()).await
+}
+
+// ─── Volumes ───
+
+#[tauri::command]
+async fn docker_volumes(target: State<'_, ActiveTarget>) -> Result<String, String> {
+    docker_exec(&target, docker::volumes_args()).await
+}
+
+#[tauri::command]
+async fn docker_volume_remove(target: State<'_, ActiveTarget>, name: String) -> Result<String, String> {
+    docker_exec(&target, docker::volume_remove_args(&name)).await
+}
+
+#[tauri::command]
+async fn docker_volume_prune(target: State<'_, ActiveTarget>) -> Result<String, String> {
+    docker_exec(&target, docker::volume_prune_args()).await
+}
+
+// ─── Réseaux ───
+
+#[tauri::command]
+async fn docker_networks(target: State<'_, ActiveTarget>) -> Result<String, String> {
+    docker_exec(&target, docker::networks_args()).await
+}
+
+#[tauri::command]
+async fn docker_network_remove(target: State<'_, ActiveTarget>, id: String) -> Result<String, String> {
+    docker_exec(&target, docker::network_remove_args(&id)).await
+}
+
+#[tauri::command]
+async fn docker_network_prune(target: State<'_, ActiveTarget>) -> Result<String, String> {
+    docker_exec(&target, docker::network_prune_args()).await
+}
+
+#[tauri::command]
+async fn disk_usage(target: State<'_, ActiveTarget>) -> Result<disk::DiskUsage, String> {
+    let active = target.conn.lock().unwrap().clone();
+    match active {
+        None => tauri::async_runtime::spawn_blocking(disk::local)
+            .await
+            .map_err(|e| e.to_string())?,
+        Some(conn) => remote_admin::disk_usage(&conn.target).await,
     }
 }
 
@@ -452,6 +515,16 @@ pub fn run() {
             docker_restart,
             docker_remove,
             docker_logs,
+            docker_images,
+            docker_image_remove,
+            docker_image_prune,
+            docker_volumes,
+            docker_volume_remove,
+            docker_volume_prune,
+            docker_networks,
+            docker_network_remove,
+            docker_network_prune,
+            disk_usage,
             get_web_server_settings,
             save_web_server_settings,
             get_local_ip,

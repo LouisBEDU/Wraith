@@ -1,6 +1,16 @@
+use crate::disk::DiskUsage;
 use crate::firewall::{FirewallRule, FirewallStatus};
 use crate::remote::{self, RemoteOutput, Target};
 use crate::ssh::SshStatus;
+
+pub async fn disk_usage(target: &Target) -> Result<DiskUsage, String> {
+    let out = remote::run_target(target, "df -kP /").await?;
+    if out.code != 0 {
+        return Err(err_message(&out));
+    }
+    crate::disk::parse_df(&out.stdout)
+        .ok_or_else(|| "Lecture de l'espace disque distante impossible.".into())
+}
 
 async fn run_priv(target: &Target, command: &str) -> Result<RemoteOutput, String> {
     if target.username == "root" {

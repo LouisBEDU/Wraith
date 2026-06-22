@@ -35,9 +35,13 @@
 
 ## Features
 
-- **Container management** — list, start, stop, restart and remove your Docker containers from a clean, native UI.
+- **Full Docker management** — containers (list, start, stop, restart, remove and live logs), plus images, volumes and networks (list, remove, prune) from a clean, native UI.
+- **Remote hosts over SSH** — manage Docker on another server through an SSH connection: save hosts, switch the active target, and every view follows the selected machine.
+- **Firewall & ports** — view inbound rules and open/close ports (Windows Firewall / ufw), with per-family IPv4/IPv6 toggles, plus SSH port management.
+- **Disk usage at a glance** — the sidebar shows the remaining storage of the machine you're connected to (local or remote), refreshed automatically.
+- **Snappy & cached** — already-loaded data is kept in memory so switching tabs is instant; views show loaders instead of empty states and refresh automatically when you change target.
 - **Runs in the background** — closing the window doesn't quit Wraith: it keeps running from the system tray, and the embedded web server (if enabled) stays up.
-- **Secure web access** — optionally expose a web UI on your local network to control Docker from any browser, protected by an Argon2-hashed password and short-lived signed sessions.
+- **Secure web access** — optionally expose a web UI on your local network to control Docker (containers, images, volumes, networks) from any browser, protected by an Argon2-hashed password and short-lived signed sessions.
 - **Built-in updater** — Wraith checks GitHub releases on startup and lets you install updates in one click from the Settings page.
 - **Multilingual** — English and French out of the box, switchable from Settings.
 - **Cross-platform** — native installers for Windows, macOS and Linux.
@@ -91,6 +95,8 @@ From **Settings**, you can enable web access to control Wraith from any device o
 1. Toggle **Web access** on and pick a port.
 2. Optionally set a password — strongly recommended if your network isn't fully trusted.
 3. Open `http://<your-local-ip>:<port>` from any browser on the same network.
+
+The web UI manages the **local** machine's Docker (containers, images, volumes, networks); SSH remote targets and firewall management remain desktop-only.
 
 Passwords are hashed with Argon2 and never stored in plain text; sessions are short-lived signed cookies, not the page's password itself.
 

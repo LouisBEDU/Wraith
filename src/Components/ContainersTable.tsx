@@ -9,6 +9,7 @@ export type ContainerAction = "start" | "stop" | "restart" | "remove";
 type ContainersTableProps = {
   containers: DockerContainer[];
   pendingId: string | null;
+  loading?: boolean;
   onAction: (container: DockerContainer, action: ContainerAction) => void;
   onShowLogs: (container: DockerContainer) => void;
 };
@@ -16,6 +17,7 @@ type ContainersTableProps = {
 export default function ContainersTable({
   containers,
   pendingId,
+  loading = false,
   onAction,
   onShowLogs,
 }: ContainersTableProps) {
@@ -121,6 +123,7 @@ export default function ContainersTable({
       columns={columns}
       rows={containers}
       rowKey={(c) => c.ID}
+      loading={loading}
       minWidth="min-w-160"
       empty={
         <>

@@ -82,6 +82,78 @@ export async function dockerLogs(id: string): Promise<string> {
   return data.raw;
 }
 
+// ─── Images ───
+
+export async function dockerImages(): Promise<string> {
+  if (isTauri) return invoke<string>("docker_images");
+  const data = await apiFetchJson<{ raw: string }>("/images");
+  return data.raw;
+}
+
+export async function dockerImageRemove(id: string): Promise<void> {
+  if (isTauri) {
+    await invoke("docker_image_remove", { id });
+    return;
+  }
+  await apiFetch(`/images/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function dockerImagePrune(): Promise<void> {
+  if (isTauri) {
+    await invoke("docker_image_prune");
+    return;
+  }
+  await apiFetch("/images/prune", { method: "POST" });
+}
+
+// ─── Volumes ───
+
+export async function dockerVolumes(): Promise<string> {
+  if (isTauri) return invoke<string>("docker_volumes");
+  const data = await apiFetchJson<{ raw: string }>("/volumes");
+  return data.raw;
+}
+
+export async function dockerVolumeRemove(name: string): Promise<void> {
+  if (isTauri) {
+    await invoke("docker_volume_remove", { name });
+    return;
+  }
+  await apiFetch(`/volumes/${encodeURIComponent(name)}`, { method: "DELETE" });
+}
+
+export async function dockerVolumePrune(): Promise<void> {
+  if (isTauri) {
+    await invoke("docker_volume_prune");
+    return;
+  }
+  await apiFetch("/volumes/prune", { method: "POST" });
+}
+
+// ─── Réseaux ───
+
+export async function dockerNetworks(): Promise<string> {
+  if (isTauri) return invoke<string>("docker_networks");
+  const data = await apiFetchJson<{ raw: string }>("/networks");
+  return data.raw;
+}
+
+export async function dockerNetworkRemove(id: string): Promise<void> {
+  if (isTauri) {
+    await invoke("docker_network_remove", { id });
+    return;
+  }
+  await apiFetch(`/networks/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function dockerNetworkPrune(): Promise<void> {
+  if (isTauri) {
+    await invoke("docker_network_prune");
+    return;
+  }
+  await apiFetch("/networks/prune", { method: "POST" });
+}
+
 export async function getWebServerSettings(): Promise<WebServerSettings> {
   return invoke<WebServerSettings>("get_web_server_settings");
 }
@@ -92,6 +164,16 @@ export async function saveWebServerSettings(settings: WebServerSettingsInput): P
 
 export async function getLocalIp(): Promise<string> {
   return invoke<string>("get_local_ip");
+}
+
+export type DiskUsage = {
+  total: number;
+  available: number;
+};
+
+export async function getDiskUsage(): Promise<DiskUsage> {
+  if (isTauri) return invoke<DiskUsage>("disk_usage");
+  return apiFetchJson<DiskUsage>("/disk");
 }
 
 export async function login(password: string): Promise<boolean> {

@@ -1,13 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import "./App.css";
 import Content from "../Components/Content";
+import Images from "../Components/Images";
 import LoginScreen from "../Components/LoginScreen";
 import Navbar, { type Page } from "../Components/Navbar";
+import Networks from "../Components/Networks";
 import Ports from "../Components/Ports";
 import Settings from "../Components/Settings";
 import Titlebar from "../Components/Titlebar";
+import Volumes from "../Components/Volumes";
 import { checkSession, isTauri } from "../lib/api";
+
+const PAGES: Record<Page, ReactNode> = {
+  containers: <Content />,
+  images: <Images />,
+  volumes: <Volumes />,
+  networks: <Networks />,
+  ports: <Ports />,
+  settings: <Settings />,
+};
 
 export default function App() {
   const { t } = useTranslation();
@@ -47,7 +59,7 @@ export default function App() {
       {isTauri && <Titlebar />}
       <div className="flex-1 min-h-0 flex">
         <Navbar page={page} onNavigate={setPage} />
-        {page === "settings" ? <Settings /> : page === "ports" ? <Ports /> : <Content />}
+        {PAGES[page]}
       </div>
     </main>
   );

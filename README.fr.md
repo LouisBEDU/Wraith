@@ -35,9 +35,13 @@
 
 ## Fonctionnalités
 
-- **Gestion des conteneurs** — liste, démarre, arrête, redémarre et supprime tes conteneurs Docker depuis une interface native et soignée.
+- **Gestion complète de Docker** — conteneurs (liste, démarrage, arrêt, redémarrage, suppression et logs en direct), mais aussi images, volumes et réseaux (liste, suppression, nettoyage) depuis une interface native et soignée.
+- **Hôtes distants en SSH** — gère Docker sur un autre serveur via une connexion SSH : enregistre des hôtes, change de cible active, et chaque vue suit la machine sélectionnée.
+- **Pare-feu & ports** — visualise les règles entrantes et ouvre/ferme des ports (pare-feu Windows / ufw), avec des bascules IPv4/IPv6 par famille, plus la gestion du port SSH.
+- **Espace disque en un coup d'œil** — la barre latérale affiche l'espace restant de la machine connectée (locale ou distante), rafraîchi automatiquement.
+- **Rapide et mis en cache** — les données déjà chargées restent en mémoire pour un changement d'onglet instantané ; les vues affichent des loaders plutôt qu'un écran vide et se rafraîchissent automatiquement au changement de cible.
 - **Continue en arrière-plan** — fermer la fenêtre ne quitte pas Wraith : l'app reste dans la zone de notification, et le serveur web embarqué (si activé) continue de tourner.
-- **Accès web sécurisé** — expose en option une interface web sur ton réseau local pour piloter Docker depuis n'importe quel navigateur, protégée par un mot de passe haché en Argon2 et des sessions signées à durée limitée.
+- **Accès web sécurisé** — expose en option une interface web sur ton réseau local pour piloter Docker (conteneurs, images, volumes, réseaux) depuis n'importe quel navigateur, protégée par un mot de passe haché en Argon2 et des sessions signées à durée limitée.
 - **Mise à jour intégrée** — Wraith vérifie les releases GitHub au démarrage et permet d'installer les mises à jour en un clic depuis les Paramètres.
 - **Multilingue** — Français et Anglais disponibles, changeables depuis les Paramètres.
 - **Multiplateforme** — installeurs natifs pour Windows, macOS et Linux.
@@ -91,6 +95,8 @@ Depuis les **Paramètres**, tu peux activer l'accès web pour piloter Wraith dep
 1. Active **Accès web** et choisis un port.
 2. Définis si possible un mot de passe — fortement recommandé si ton réseau n'est pas totalement de confiance.
 3. Ouvre `http://<ton-ip-locale>:<port>` depuis n'importe quel navigateur sur le même réseau.
+
+L'interface web pilote le Docker de la machine **locale** (conteneurs, images, volumes, réseaux) ; les cibles distantes SSH et la gestion du pare-feu restent réservées à l'app desktop.
 
 Les mots de passe sont hachés en Argon2 et jamais stockés en clair ; les sessions sont des cookies signés à courte durée de vie, pas le mot de passe lui-même.
 

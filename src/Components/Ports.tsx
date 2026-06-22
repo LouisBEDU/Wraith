@@ -10,7 +10,8 @@ import {
 import type { FirewallRule } from "../types/firewall";
 import { useToast } from "../lib/toast";
 import { useSystemTools } from "../lib/systemTools";
-import { useConnections } from "../lib/connections";
+import { useResource } from "../lib/dockerData";
+import { friendlyDockerError } from "../lib/dockerError";
 import ConfirmDialog from "./ConfirmDialog";
 import DataTable, { type DataTableColumn } from "./DataTable";
 import {
@@ -57,9 +58,6 @@ export default function Ports() {
   const { t } = useTranslation();
   const toast = useToast();
   const { tools, refresh: refreshTools } = useSystemTools();
-  const { activeId } = useConnections();
-  const [rules, setRules] = useState<FirewallRule[]>([]);
-  const [loading, setLoading] = useState(true);
   const [portInput, setPortInput] = useState("");
   const [protocol, setProtocol] = useState<Protocol>("tcp");
   const [opening, setOpening] = useState(false);
@@ -69,25 +67,19 @@ export default function Ports() {
   const [settingSsh, setSettingSsh] = useState(false);
   const [pendingSshPort, setPendingSshPort] = useState<number | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const fetched = await refreshTools();
-      setRules(fetched?.firewall.available ? await getFirewallRules() : []);
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [refreshTools, toast]);
+  // Récupère aussi l'état des outils système (pare-feu/SSH) en même temps que
+  // les règles, le tout mis en cache et rafraîchi au changement de cible.
+  const loadRules = useCallback(async () => {
+    const fetched = await refreshTools();
+    return fetched?.firewall.available ? await getFirewallRules() : [];
+  }, [refreshTools]);
+
+  const { data, loading, error, reload } = useResource<FirewallRule>("firewall-rules", loadRules);
+  const rules = data ?? [];
 
   useEffect(() => {
-    if (!isTauri) {
-      setLoading(false);
-      return;
-    }
-    load();
-  }, [load, activeId]);
+    if (error) toast.error(friendlyDockerError(error, t));
+  }, [error, toast, t]);
 
   const firewall = tools?.firewall ?? null;
   const ssh = tools?.ssh ?? null;
@@ -105,7 +97,7 @@ export default function Ports() {
       } else {
         await openFirewallPort(Number(group.port), group.protocol, version);
       }
-      setRules(await getFirewallRules());
+      await reload();
       toast.success(
         t(present ? "ports.toastVersionClosed" : "ports.toastVersionOpened", {
           port: group.port,
@@ -216,7 +208,7 @@ export default function Ports() {
       await openFirewallPort(port, protocol);
       toast.success(t("ports.toastOpened", { port, protocol: protocol.toUpperCase() }));
       setPortInput("");
-      setRules(await getFirewallRules());
+      await reload();
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -239,7 +231,7 @@ export default function Ports() {
       toast.success(
         t("ports.toastClosed", { port: group.port, protocol: group.protocol.toUpperCase() }),
       );
-      setRules(await getFirewallRules());
+      await reload();
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -265,7 +257,7 @@ export default function Ports() {
       await setSshPort(port);
       toast.success(t("ports.sshToastChanged", { port }));
       setSshPortInput("");
-      await refreshTools();
+      await reload();
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -276,7 +268,7 @@ export default function Ports() {
   if (!isTauri) {
     return (
       <div className="flex-1 min-h-0 min-w-0 overflow-y-auto p-4 sm:p-6 flex flex-col gap-5 sm:gap-6">
-        <Header t={t} onRefresh={load} loading={loading} disabled />
+        <Header t={t} onRefresh={reload} loading={loading} disabled />
         <div className="card max-w-lg p-5 text-sm text-anthracite-500">
           {t("ports.webOnlyDesktop")}
         </div>
@@ -286,7 +278,7 @@ export default function Ports() {
 
   return (
     <div className="flex-1 min-h-0 min-w-0 overflow-y-auto p-4 sm:p-6 flex flex-col gap-5 sm:gap-6">
-      <Header t={t} onRefresh={load} loading={loading} />
+      <Header t={t} onRefresh={reload} loading={loading} />
 
       {loading && !tools ? (
         <p className="text-sm text-anthracite-500">{t("ports.loading")}</p>
@@ -390,6 +382,7 @@ export default function Ports() {
               columns={ruleColumns}
               rows={groups}
               rowKey={(group) => group.key}
+              loading={loading}
               minWidth="min-w-120"
               empty={
                 <>
