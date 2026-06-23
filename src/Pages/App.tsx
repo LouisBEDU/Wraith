@@ -8,6 +8,7 @@ import Ports from "../Components/Ports";
 import Settings from "../Components/Settings";
 import Titlebar from "../Components/Titlebar";
 import Volumes from "../Components/Volumes";
+import WindowResizer from "../Components/WindowResizer";
 
 const PAGES: Record<Page, ReactNode> = {
   containers: <Content />,
@@ -23,6 +24,7 @@ export default function App() {
 
   return (
     <main className="h-screen flex flex-col bg-paper">
+      <WindowResizer />
       <Titlebar />
       <div className="flex-1 min-h-0 flex">
         <Navbar page={page} onNavigate={setPage} />

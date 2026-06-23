@@ -119,6 +119,68 @@
     }
   }
 
+  /* Poignées de redimensionnement de la fenêtre sans décorations (Linux). */
+  .rh {
+    position: fixed;
+    z-index: 60;
+  }
+  .rh-n {
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    cursor: ns-resize;
+  }
+  .rh-s {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    cursor: ns-resize;
+  }
+  .rh-e {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 4px;
+    cursor: ew-resize;
+  }
+  .rh-w {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    cursor: ew-resize;
+  }
+  .rh-nw,
+  .rh-ne,
+  .rh-sw,
+  .rh-se {
+    width: 9px;
+    height: 9px;
+    z-index: 61;
+  }
+  .rh-nw {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+  }
+  .rh-ne {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+  }
+  .rh-sw {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+  }
+  .rh-se {
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+  }
+
   .sidebar-rail {
     @apply relative h-full shrink-0;
 
