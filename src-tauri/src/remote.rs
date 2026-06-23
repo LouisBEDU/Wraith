@@ -1,6 +1,8 @@
+use crate::known_hosts::{KnownHosts, Verdict};
 use russh::client;
+use russh::keys::ssh_key::HashAlg;
 use russh::keys::{load_secret_key, PrivateKeyWithHashAlg};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct RemoteOutput {
     pub stdout: String,
@@ -24,10 +26,20 @@ pub struct Target {
     pub username: String,
     pub auth: Auth,
     pub sudo_password: Option<String>,
+    pub known_hosts: KnownHosts,
 }
 
 pub async fn run_target(target: &Target, command: &str) -> Result<RemoteOutput, String> {
-    exec(&target.host, target.port, &target.username, &target.auth, command, None).await
+    exec(
+        &target.host,
+        target.port,
+        &target.username,
+        &target.auth,
+        command,
+        None,
+        &target.known_hosts,
+    )
+    .await
 }
 
 pub async fn run_target_stdin(
@@ -42,20 +54,45 @@ pub async fn run_target_stdin(
         &target.auth,
         command,
         Some(stdin),
+        &target.known_hosts,
     )
     .await
 }
 
-struct Handler;
+struct Handler {
+    host: String,
+    port: u16,
+    known_hosts: KnownHosts,
+    /// Renseigné si la clé serveur est rejetée (empreinte changée), pour
+    /// remonter un message explicite : `check_server_key` ne peut renvoyer
+    /// qu'un booléen.
+    rejection: Arc<Mutex<Option<String>>>,
+}
 
 impl client::Handler for Handler {
     type Error = russh::Error;
 
     async fn check_server_key(
         &mut self,
-        _server_public_key: &russh::keys::ssh_key::PublicKey,
+        server_public_key: &russh::keys::ssh_key::PublicKey,
     ) -> Result<bool, Self::Error> {
-        Ok(true)
+        let fingerprint = server_public_key.fingerprint(HashAlg::Sha256).to_string();
+        match self.known_hosts.verify(&self.host, self.port, &fingerprint) {
+            Verdict::Trusted => Ok(true),
+            Verdict::Mismatch { stored, presented } => {
+                *self.rejection.lock().unwrap() = Some(format!(
+                    "⚠ La clé d'identité du serveur {}:{} a changé !\n\n\
+                     Attendue : {stored}\n\
+                     Reçue    : {presented}\n\n\
+                     Connexion refusée par sécurité : cela peut signaler une tentative \
+                     d'interception. Si ce changement est légitime (réinstallation du \
+                     serveur, etc.), supprimez puis recréez cette connexion pour \
+                     réaccorder la confiance.",
+                    self.host, self.port
+                ));
+                Ok(false)
+            }
+        }
     }
 }
 
@@ -65,8 +102,9 @@ pub async fn run(
     user: &str,
     auth: &Auth,
     command: &str,
+    known_hosts: &KnownHosts,
 ) -> Result<RemoteOutput, String> {
-    exec(host, port, user, auth, command, None).await
+    exec(host, port, user, auth, command, None, known_hosts).await
 }
 
 async fn exec(
@@ -76,12 +114,29 @@ async fn exec(
     auth: &Auth,
     command: &str,
     stdin: Option<&[u8]>,
+    known_hosts: &KnownHosts,
 ) -> Result<RemoteOutput, String> {
     let config = Arc::new(client::Config::default());
 
-    let mut session = client::connect(config, (host, port), Handler)
-        .await
-        .map_err(|e| format!("Connexion SSH impossible ({host}:{port}) : {e}"))?;
+    let rejection = Arc::new(Mutex::new(None));
+    let handler = Handler {
+        host: host.to_string(),
+        port,
+        known_hosts: known_hosts.clone(),
+        rejection: rejection.clone(),
+    };
+
+    let mut session = match client::connect(config, (host, port), handler).await {
+        Ok(session) => session,
+        Err(err) => {
+            // Une clé hôte rejetée fait échouer `connect` : on privilégie le
+            // message explicite si la vérification a posé un veto.
+            if let Some(message) = rejection.lock().unwrap().take() {
+                return Err(message);
+            }
+            return Err(format!("Connexion SSH impossible ({host}:{port}) : {err}"));
+        }
+    };
 
     let result = match auth {
         Auth::Password(password) => session

@@ -7,7 +7,7 @@ pub struct DiskUsage {
 }
 
 pub fn parse_df(raw: &str) -> Option<DiskUsage> {
-    let line = raw.lines().filter(|l| !l.trim().is_empty()).next_back()?;
+    let line = raw.lines().rfind(|l| !l.trim().is_empty())?;
     let cols: Vec<&str> = line.split_whitespace().collect();
     if cols.len() < 4 {
         return None;

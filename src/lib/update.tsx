@@ -8,7 +8,6 @@ import {
 } from "react";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { isTauri } from "./api";
 
 type UpdateContextValue = {
   available: boolean;
@@ -24,7 +23,6 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
-    if (!isTauri) return;
     check()
       .then((result) => setUpdate(result))
       .catch(() => setUpdate(null));

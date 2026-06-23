@@ -91,6 +91,7 @@
   "dockerError": {
     "daemonDown": "Docker isn't responding. Make sure Docker Desktop (or the Docker service) is running, then try again.",
     "containerNotFound": "This container no longer exists. Refresh the list.",
+    "resourceInUse": "Still in use by a container. Stop and remove the container(s) using it, then try again.",
     "generic": "A Docker error occurred."
   },
   "table": {
@@ -167,7 +168,6 @@
     "title": "Ports & firewall",
     "subtitle": "View open inbound ports and manage firewall rules on this machine.",
     "loading": "Checking tools…",
-    "webOnlyDesktop": "Firewall management is only available from the Wraith desktop app, not from web access.",
     "statusTitle": "Tools",
     "dockerLabel": "Docker",
     "firewallLabel": "Firewall ({{backend}})",
@@ -217,61 +217,22 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Configure web access to Wraith.",
+    "subtitle": "Application preferences and system tools.",
     "updateAvailable": "New version available (v{{version}})",
     "updateDescription": "Downloads and installs the update, then restarts Wraith.",
     "updateButton": "Update",
     "updateInstalling": "Installing…",
-    "webOnlyDesktop": "Settings can only be changed from the Wraith desktop app, not from this web access.",
-    "loading": "Loading…",
     "generalTitle": "General",
     "generalSubtitle": "General application preferences.",
     "language": "Language",
     "languageFrench": "Français",
     "languageEnglish": "English",
+    "version": "Version",
     "toolsTitle": "System tools",
     "toolInstalled": "Installed",
     "toolMissing": "Not detected",
     "toolFirewall": "Firewall ({{backend}})",
-    "toolSsh": "SSH server",
-    "connTitle": "Remote connection (SSH)",
-    "connSubtitle": "Test connecting to a Docker host on another server over SSH.",
-    "connHost": "Host",
-    "connPort": "Port",
-    "connUser": "Username",
-    "connAuth": "Authentication",
-    "connAuthKey": "Private key",
-    "connAuthPassword": "Password",
-    "connKeyPath": "Private key path",
-    "connPassphrase": "Key passphrase",
-    "connPassword": "Password",
-    "connOptional": "Optional",
-    "connTest": "Test connection",
-    "connTesting": "Connecting…",
-    "connOk": "Connected — {{version}}",
-    "connFillRequired": "Host and username are required.",
-    "runInBackground": "Run in background",
-    "runInBackgroundDescription": "Closing the window doesn't quit Wraith: the app stays in the system tray and the web server keeps running. Disable so closing the window fully quits the app.",
-    "webAccessTitle": "Web access",
-    "webAccessEnable": "Enable web access",
-    "webAccessDescription": "Expose Wraith on the network to control it from a browser, in addition to the desktop app.",
-    "port": "Port",
-    "password": "Password",
-    "passwordPlaceholder": "Required to enable web access",
-    "passwordPlaceholderSet": "Leave empty to keep the current password",
-    "passwordBadgeSet": "Protected",
-    "passwordBadgeUnset": "No password",
-    "passwordClear": "Remove password",
-    "passwordHint": "Requested via the Wraith login screen on first browser access. Required to enable web access.",
-    "networkHint": "Accessible from the network at",
-    "showIp": "Show address",
-    "hideIp": "Hide address",
-    "save": "Save",
-    "saving": "Saving…",
-    "toastSaved": "Settings saved.",
-    "toastPasswordRequired": "A password is required to enable web access.",
-    "toastInvalidPort": "Port must be between 1 and 65535.",
-    "toastPasswordRemoved": "Password removed."
+    "toolSsh": "SSH server"
   },
   "conn": {
     "title": "Remote connections (SSH)",
@@ -312,21 +273,9 @@
     "usingLocal": "Switched to the local machine.",
     "testOk": "Connected — {{version}}"
   },
-  "login": {
-    "appName": "Wraith",
-    "subtitle": "Protected web access. Enter the password to continue.",
-    "password": "Password",
-    "wrongPassword": "Incorrect password.",
-    "serverError": "Unable to reach the server.",
-    "connecting": "Connecting…",
-    "submit": "Log in"
-  },
   "titlebar": {
     "minimize": "Minimize",
     "maximize": "Maximize",
     "close": "Close"
-  },
-  "app": {
-    "loading": "Loading…"
   }
 }

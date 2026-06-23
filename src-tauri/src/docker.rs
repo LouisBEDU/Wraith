@@ -117,58 +117,6 @@ pub fn merge_logs(stdout: &str, stderr: &str) -> String {
     lines.join("\n")
 }
 
-pub fn ps() -> Result<String, String> {
-    run_docker_command(&["ps", "--all", "--format", "json"])
-}
-
-pub fn start(id: &str) -> Result<String, String> {
-    run_docker_command(&["start", id])
-}
-
-pub fn stop(id: &str) -> Result<String, String> {
-    run_docker_command(&["stop", id])
-}
-
-pub fn restart(id: &str) -> Result<String, String> {
-    run_docker_command(&["restart", id])
-}
-
-pub fn remove(id: &str) -> Result<String, String> {
-    run_docker_command(&["rm", "--force", id])
-}
-
-// ─── Images / Volumes / Réseaux : exécution locale (serveur web) ───
-
-pub fn images() -> Result<String, String> {
-    run_local(&images_args())
-}
-pub fn image_remove(id: &str) -> Result<String, String> {
-    run_local(&image_remove_args(id))
-}
-pub fn image_prune() -> Result<String, String> {
-    run_local(&image_prune_args())
-}
-
-pub fn volumes() -> Result<String, String> {
-    run_local(&volumes_args())
-}
-pub fn volume_remove(name: &str) -> Result<String, String> {
-    run_local(&volume_remove_args(name))
-}
-pub fn volume_prune() -> Result<String, String> {
-    run_local(&volume_prune_args())
-}
-
-pub fn networks() -> Result<String, String> {
-    run_local(&networks_args())
-}
-pub fn network_remove(id: &str) -> Result<String, String> {
-    run_local(&network_remove_args(id))
-}
-pub fn network_prune() -> Result<String, String> {
-    run_local(&network_prune_args())
-}
-
 const LOGS_TAIL_LINES: &str = "300";
 
 pub fn logs(id: &str) -> Result<String, String> {

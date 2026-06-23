@@ -5,7 +5,7 @@
 <h1 align="center">Wraith</h1>
 
 <p align="center">
-  Une application desktop pour gérer totalement Docker — conteneurs, accès web et plus — avec Tauri, React et Rust.
+  Une application desktop pour gérer totalement Docker — en local et sur des serveurs distants via SSH — avec Tauri, React et Rust.
 </p>
 
 <p align="center">
@@ -28,7 +28,6 @@
 - [Stack technique](#stack-technique)
 - [Démarrage](#démarrage)
 - [Build d'une release](#build-dune-release)
-- [Accès web](#accès-web)
 - [Mises à jour automatiques](#mises-à-jour-automatiques)
 - [Langues](#langues)
 - [Sécurité](#sécurité)
@@ -40,8 +39,6 @@
 - **Pare-feu & ports** — visualise les règles entrantes et ouvre/ferme des ports (pare-feu Windows / ufw), avec des bascules IPv4/IPv6 par famille, plus la gestion du port SSH.
 - **Espace disque en un coup d'œil** — la barre latérale affiche l'espace restant de la machine connectée (locale ou distante), rafraîchi automatiquement.
 - **Rapide et mis en cache** — les données déjà chargées restent en mémoire pour un changement d'onglet instantané ; les vues affichent des loaders plutôt qu'un écran vide et se rafraîchissent automatiquement au changement de cible.
-- **Continue en arrière-plan** — fermer la fenêtre ne quitte pas Wraith : l'app reste dans la zone de notification, et le serveur web embarqué (si activé) continue de tourner.
-- **Accès web sécurisé** — expose en option une interface web sur ton réseau local pour piloter Docker (conteneurs, images, volumes, réseaux) depuis n'importe quel navigateur, protégée par un mot de passe haché en Argon2 et des sessions signées à durée limitée.
 - **Mise à jour intégrée** — Wraith vérifie les releases GitHub au démarrage et permet d'installer les mises à jour en un clic depuis les Paramètres.
 - **Multilingue** — Français et Anglais disponibles, changeables depuis les Paramètres.
 - **Multiplateforme** — installeurs natifs pour Windows, macOS et Linux.
@@ -76,7 +73,7 @@ npm install
 npm run tauri dev
 ```
 
-Ça démarre le serveur de dev Vite et lance la fenêtre desktop Tauri. Tu peux aussi lancer `npm run dev` pour prévisualiser l'interface web seule dans un navigateur, sans contrôle Docker.
+Ça démarre le serveur de dev Vite et lance la fenêtre desktop Tauri. Le contrôle de Docker n'est disponible que depuis la fenêtre Tauri (il repose sur des commandes natives), pas depuis un simple navigateur.
 
 ## Build d'une release
 
@@ -87,18 +84,6 @@ npm run tauri build
 Génère les installeurs natifs (`.exe` / `.msi` sur Windows, `.dmg` sur macOS, `.deb` / `.AppImage` sur Linux) dans `src-tauri/target/release/bundle`.
 
 Les releases sont aussi construites automatiquement par GitHub Actions à chaque tag `v*` (voir [`.github/workflows/release.yml`](.github/workflows/release.yml)).
-
-## Accès web
-
-Depuis les **Paramètres**, tu peux activer l'accès web pour piloter Wraith depuis n'importe quel appareil de ton réseau local :
-
-1. Active **Accès web** et choisis un port.
-2. Définis si possible un mot de passe — fortement recommandé si ton réseau n'est pas totalement de confiance.
-3. Ouvre `http://<ton-ip-locale>:<port>` depuis n'importe quel navigateur sur le même réseau.
-
-L'interface web pilote le Docker de la machine **locale** (conteneurs, images, volumes, réseaux) ; les cibles distantes SSH et la gestion du pare-feu restent réservées à l'app desktop.
-
-Les mots de passe sont hachés en Argon2 et jamais stockés en clair ; les sessions sont des cookies signés à courte durée de vie, pas le mot de passe lui-même.
 
 ## Mises à jour automatiques
 
@@ -114,10 +99,10 @@ Wraith démarre par défaut en **Anglais**. Tu peux passer en **Français** à t
 
 Wraith a fait l'objet d'un audit de sécurité dédié :
 
-- Content-Security-Policy stricte, sur la webview desktop comme sur le serveur web embarqué.
-- Protection contre la traversée de chemin sur le gestionnaire de fichiers statiques du serveur web embarqué.
-- Mots de passe hachés en Argon2, cookies de session `HttpOnly`, expiration automatique des sessions.
-- Headers de sécurité (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) sur chaque réponse web.
+- Content-Security-Policy stricte sur la webview desktop.
+- Vérification de la clé hôte SSH (Trust On First Use) : l'empreinte de la clé d'un serveur est mémorisée au premier contact, et toute divergence ultérieure bloque la connexion pour se prémunir des attaques d'interception (man-in-the-middle).
+- Les mots de passe SSH, passphrases de clé et mots de passe sudo sont stockés dans le trousseau du système (Keychain / Gestionnaire d'identifiants / Secret Service), jamais en clair.
+- Les commandes shell distantes sont construites avec un échappement strict par guillemets simples pour empêcher l'injection d'arguments.
 
 ---
 

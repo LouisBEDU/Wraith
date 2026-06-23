@@ -8,7 +8,6 @@ import {
 } from "react";
 import {
   getActiveConnection,
-  isTauri,
   listConnections,
   setActiveConnection as apiSetActive,
 } from "./api";
@@ -27,13 +26,9 @@ const ConnectionsContext = createContext<ConnectionsContextValue | null>(null);
 export function ConnectionsProvider({ children }: { children: ReactNode }) {
   const [connections, setConnections] = useState<ConnectionProfile[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(isTauri);
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!isTauri) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
       const [list, active] = await Promise.all([listConnections(), getActiveConnection()]);

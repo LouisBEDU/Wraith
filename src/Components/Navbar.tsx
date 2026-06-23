@@ -16,7 +16,7 @@ import {
 import { useUpdate } from "../lib/update";
 import { useSystemTools } from "../lib/systemTools";
 import { useConnections } from "../lib/connections";
-import { getDiskUsage, isTauri, type DiskUsage } from "../lib/api";
+import { getDiskUsage, type DiskUsage } from "../lib/api";
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -116,7 +116,7 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
   const listRef = useRef<HTMLUListElement>(null);
   const [hasScrollbar, setHasScrollbar] = useState(false);
   const [dockerOpen, setDockerOpen] = useState(true);
-  const dockerAvailable = !isTauri || tools === null || tools.docker;
+  const dockerAvailable = tools === null || tools.docker;
 
   const activeConn = activeId ? (connections.find((c) => c.id === activeId) ?? null) : null;
   const targetName = activeConn ? activeConn.name : t("nav.targetLocal");
@@ -147,25 +147,23 @@ export default function Navbar({ page, onNavigate }: NavbarProps) {
           </span>
         </div>
 
-        {isTauri && (
-          <button
-            type="button"
-            onClick={() => onNavigate("settings")}
-            title={`${t("nav.target")} : ${targetName}`}
-            className="mx-3 mt-3 flex items-center gap-2 rounded-lg bg-white/5 px-1 py-1.5 transition-colors hover:bg-white/10"
-          >
-            <span className="sidebar-icon">
-              <ServerIcon
-                className={`h-5 w-5 shrink-0 ${isRemote ? "text-accent-400" : "text-paper/45"}`}
-              />
+        <button
+          type="button"
+          onClick={() => onNavigate("settings")}
+          title={`${t("nav.target")} : ${targetName}`}
+          className="mx-3 mt-3 flex items-center gap-2 rounded-lg bg-white/5 px-1 py-1.5 transition-colors hover:bg-white/10"
+        >
+          <span className="sidebar-icon">
+            <ServerIcon
+              className={`h-5 w-5 shrink-0 ${isRemote ? "text-accent-400" : "text-paper/45"}`}
+            />
+          </span>
+          <span className="sidebar-fade min-w-0 flex-1">
+            <span className="block min-w-0 truncate text-xs font-medium text-paper/80">
+              {targetName}
             </span>
-            <span className="sidebar-fade min-w-0 flex-1">
-              <span className="block min-w-0 truncate text-xs font-medium text-paper/80">
-                {targetName}
-              </span>
-            </span>
-          </button>
-        )}
+          </span>
+        </button>
 
         <ul ref={listRef} className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
           <li>

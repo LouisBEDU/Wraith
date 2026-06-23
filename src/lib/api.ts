@@ -2,54 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import type { FirewallRule, SystemTools } from "../types/firewall";
 import type { ConnectionProfile, ConnectionSaveInput } from "../types/connection";
 
-export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-
-export type WebServerSettings = {
-  enabled: boolean;
-  port: number;
-  has_password: boolean;
-  run_in_background: boolean;
-};
-
-export type WebServerSettingsInput = {
-  enabled: boolean;
-  port: number;
-  password: string | null;
-  run_in_background: boolean;
-};
-
-async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
-  const res = await fetch(`/api${path}`, options);
-  if (res.status === 401) {
-    window.dispatchEvent(new Event("wraith:unauthorized"));
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `Erreur ${res.status}`);
-  }
-  return res;
-}
-
-async function apiFetchJson<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await apiFetch(path, options);
-  const text = await res.text();
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    throw new Error(
-      "Réponse inattendue du serveur (pas du JSON). Si tu es sur le port 1420, " +
-        "c'est le serveur de dev Vite : utilise la fenêtre desktop (npm run tauri dev) " +
-        "ou le port du serveur web configuré dans Paramètres.",
-    );
-  }
-}
-
 export async function dockerPs(): Promise<string> {
-  if (isTauri) {
-    return invoke<string>("docker_ps");
-  }
-  const data = await apiFetchJson<{ raw: string }>("/containers");
-  return data.raw;
+  return invoke<string>("docker_ps");
 }
 
 export type ContainerAction = "start" | "stop" | "restart" | "remove";
@@ -62,108 +16,53 @@ const ACTION_COMMAND: Record<ContainerAction, string> = {
 };
 
 export async function dockerAction(action: ContainerAction, id: string): Promise<void> {
-  if (isTauri) {
-    await invoke(ACTION_COMMAND[action], { id });
-    return;
-  }
-
-  if (action === "remove") {
-    await apiFetch(`/containers/${encodeURIComponent(id)}`, { method: "DELETE" });
-  } else {
-    await apiFetch(`/containers/${encodeURIComponent(id)}/${action}`, { method: "POST" });
-  }
+  await invoke(ACTION_COMMAND[action], { id });
 }
 
 export async function dockerLogs(id: string): Promise<string> {
-  if (isTauri) {
-    return invoke<string>("docker_logs", { id });
-  }
-  const data = await apiFetchJson<{ raw: string }>(`/containers/${encodeURIComponent(id)}/logs`);
-  return data.raw;
+  return invoke<string>("docker_logs", { id });
 }
 
 // ─── Images ───
 
 export async function dockerImages(): Promise<string> {
-  if (isTauri) return invoke<string>("docker_images");
-  const data = await apiFetchJson<{ raw: string }>("/images");
-  return data.raw;
+  return invoke<string>("docker_images");
 }
 
 export async function dockerImageRemove(id: string): Promise<void> {
-  if (isTauri) {
-    await invoke("docker_image_remove", { id });
-    return;
-  }
-  await apiFetch(`/images/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await invoke("docker_image_remove", { id });
 }
 
 export async function dockerImagePrune(): Promise<void> {
-  if (isTauri) {
-    await invoke("docker_image_prune");
-    return;
-  }
-  await apiFetch("/images/prune", { method: "POST" });
+  await invoke("docker_image_prune");
 }
 
 // ─── Volumes ───
 
 export async function dockerVolumes(): Promise<string> {
-  if (isTauri) return invoke<string>("docker_volumes");
-  const data = await apiFetchJson<{ raw: string }>("/volumes");
-  return data.raw;
+  return invoke<string>("docker_volumes");
 }
 
 export async function dockerVolumeRemove(name: string): Promise<void> {
-  if (isTauri) {
-    await invoke("docker_volume_remove", { name });
-    return;
-  }
-  await apiFetch(`/volumes/${encodeURIComponent(name)}`, { method: "DELETE" });
+  await invoke("docker_volume_remove", { name });
 }
 
 export async function dockerVolumePrune(): Promise<void> {
-  if (isTauri) {
-    await invoke("docker_volume_prune");
-    return;
-  }
-  await apiFetch("/volumes/prune", { method: "POST" });
+  await invoke("docker_volume_prune");
 }
 
 // ─── Réseaux ───
 
 export async function dockerNetworks(): Promise<string> {
-  if (isTauri) return invoke<string>("docker_networks");
-  const data = await apiFetchJson<{ raw: string }>("/networks");
-  return data.raw;
+  return invoke<string>("docker_networks");
 }
 
 export async function dockerNetworkRemove(id: string): Promise<void> {
-  if (isTauri) {
-    await invoke("docker_network_remove", { id });
-    return;
-  }
-  await apiFetch(`/networks/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await invoke("docker_network_remove", { id });
 }
 
 export async function dockerNetworkPrune(): Promise<void> {
-  if (isTauri) {
-    await invoke("docker_network_prune");
-    return;
-  }
-  await apiFetch("/networks/prune", { method: "POST" });
-}
-
-export async function getWebServerSettings(): Promise<WebServerSettings> {
-  return invoke<WebServerSettings>("get_web_server_settings");
-}
-
-export async function saveWebServerSettings(settings: WebServerSettingsInput): Promise<void> {
-  await invoke("save_web_server_settings", { settings });
-}
-
-export async function getLocalIp(): Promise<string> {
-  return invoke<string>("get_local_ip");
+  await invoke("docker_network_prune");
 }
 
 export type DiskUsage = {
@@ -172,32 +71,7 @@ export type DiskUsage = {
 };
 
 export async function getDiskUsage(): Promise<DiskUsage> {
-  if (isTauri) return invoke<DiskUsage>("disk_usage");
-  return apiFetchJson<DiskUsage>("/disk");
-}
-
-export async function login(password: string): Promise<boolean> {
-  const res = await fetch("/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password }),
-  });
-  const data = await res.json().catch(() => ({ ok: false }));
-  return Boolean(data.ok);
-}
-
-export async function checkSession(): Promise<boolean> {
-  try {
-    const res = await fetch("/api/session");
-    const data = await res.json();
-    return Boolean(data.authenticated);
-  } catch {
-    return false;
-  }
-}
-
-export async function logout(): Promise<void> {
-  await fetch("/api/logout", { method: "POST" }).catch(() => {});
+  return invoke<DiskUsage>("disk_usage");
 }
 
 export async function getSystemTools(): Promise<SystemTools> {

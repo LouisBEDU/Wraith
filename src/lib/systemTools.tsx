@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getSystemTools, isTauri } from "./api";
+import { getSystemTools } from "./api";
 import { useConnections } from "./connections";
 import type { SystemTools } from "../types/firewall";
 
@@ -21,13 +21,9 @@ const SystemToolsContext = createContext<SystemToolsContextValue | null>(null);
 export function SystemToolsProvider({ children }: { children: ReactNode }) {
   const { activeId } = useConnections();
   const [tools, setTools] = useState<SystemTools | null>(null);
-  const [loading, setLoading] = useState(isTauri);
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async (): Promise<SystemTools | null> => {
-    if (!isTauri) {
-      setLoading(false);
-      return null;
-    }
     setLoading(true);
     try {
       const fetched = await getSystemTools();

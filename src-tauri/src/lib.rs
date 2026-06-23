@@ -2,29 +2,17 @@ mod connections;
 mod disk;
 mod docker;
 mod firewall;
+mod known_hosts;
 mod remote;
 mod remote_admin;
-mod settings;
 mod ssh;
-mod web_server;
 #[cfg(target_os = "windows")]
 mod winproc;
 
 use serde::Serialize;
-use settings::WebServerSettings;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use tauri::menu::{Menu, MenuItem};
-use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager, State, WindowEvent};
-use web_server::{RuntimeConfig, ServerHandle};
-
-struct WebServerState {
-    config: web_server::SharedConfig,
-    handle: Mutex<Option<ServerHandle>>,
-    run_in_background: AtomicBool,
-}
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager, State};
 
 #[derive(Default)]
 struct ActiveTarget {
@@ -37,7 +25,21 @@ struct ActiveConn {
     target: remote::Target,
 }
 
-fn resolve_remote(profile: &connections::ConnectionProfile) -> Result<remote::Target, String> {
+/// Magasin d'empreintes de clés hôtes SSH (Trust On First Use), stocké à côté
+/// des autres données de configuration de l'application.
+fn known_hosts(app: &AppHandle) -> known_hosts::KnownHosts {
+    let path = app
+        .path()
+        .app_config_dir()
+        .map(|dir| dir.join("known_hosts.json"))
+        .unwrap_or_else(|_| PathBuf::from("known_hosts.json"));
+    known_hosts::KnownHosts::new(path)
+}
+
+fn resolve_remote(
+    app: &AppHandle,
+    profile: &connections::ConnectionProfile,
+) -> Result<remote::Target, String> {
     let secret = connections::secret(&profile.id);
     let auth = if profile.auth_method == "password" {
         remote::Auth::Password(
@@ -58,6 +60,7 @@ fn resolve_remote(profile: &connections::ConnectionProfile) -> Result<remote::Ta
         username: profile.username.clone(),
         auth,
         sudo_password: connections::sudo_secret(&profile.id),
+        known_hosts: known_hosts(app),
     })
 }
 
@@ -92,53 +95,6 @@ async fn docker_exec(target: &ActiveTarget, args: Vec<String>) -> Result<String,
             }
         }
     }
-}
-
-fn frontend_dir(app: &AppHandle) -> PathBuf {
-    if cfg!(debug_assertions) {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("dist")
-    } else {
-        app.path()
-            .resource_dir()
-            .expect("dossier de resources introuvable")
-            .join("dist")
-    }
-}
-
-fn apply_web_server_state(app: &AppHandle, settings: &WebServerSettings) -> Result<(), String> {
-    let state = app.state::<WebServerState>();
-
-    {
-        let mut cfg = state.config.lock().unwrap();
-        if cfg.password_hash != settings.password_hash {
-            cfg.sessions.clear();
-        }
-        cfg.enabled = settings.enabled;
-        cfg.password_hash = settings.password_hash.clone();
-    }
-
-    state
-        .run_in_background
-        .store(settings.run_in_background, Ordering::SeqCst);
-
-    let should_run = settings.enabled && !settings.password_hash.is_empty();
-
-    let mut guard = state.handle.lock().unwrap();
-    let already_on_port = guard.as_ref().is_some_and(|h| h.port == settings.port);
-
-    if should_run && !already_on_port {
-        if let Some(handle) = guard.take() {
-            handle.stop();
-        }
-        let handle = web_server::start(settings.port, frontend_dir(app), state.config.clone())?;
-        *guard = Some(handle);
-    } else if !should_run {
-        if let Some(handle) = guard.take() {
-            handle.stop();
-        }
-    }
-
-    Ok(())
 }
 
 #[tauri::command]
@@ -243,27 +199,6 @@ async fn disk_usage(target: State<'_, ActiveTarget>) -> Result<disk::DiskUsage, 
     }
 }
 
-#[tauri::command]
-fn get_web_server_settings(app: AppHandle) -> settings::WebServerSettingsView {
-    settings::WebServerSettingsView::from(&settings::load(&app))
-}
-
-#[tauri::command]
-fn save_web_server_settings(
-    app: AppHandle,
-    settings: settings::WebServerSettingsInput,
-) -> Result<(), String> {
-    let saved = settings::save(&app, &settings)?;
-    apply_web_server_state(&app, &saved)
-}
-
-#[tauri::command]
-fn get_local_ip() -> Result<String, String> {
-    local_ip_address::local_ip()
-        .map(|ip| ip.to_string())
-        .map_err(|e| e.to_string())
-}
-
 #[derive(Serialize)]
 struct SystemTools {
     docker: bool,
@@ -292,6 +227,7 @@ async fn system_tools(target: State<'_, ActiveTarget>) -> Result<SystemTools, St
 
 #[tauri::command]
 async fn connection_test(
+    app: AppHandle,
     host: String,
     port: u16,
     username: String,
@@ -308,7 +244,8 @@ async fn connection_test(
         }
     };
 
-    let out = remote::run(&host, port, &username, &auth, "docker --version").await?;
+    let store = known_hosts(&app);
+    let out = remote::run(&host, port, &username, &auth, "docker --version", &store).await?;
     if out.code == 0 {
         Ok(out.stdout.trim().to_string())
     } else if !out.stderr.trim().is_empty() {
@@ -343,6 +280,11 @@ fn connection_delete(
             *guard = None;
         }
     }
+    // Oublie l'empreinte de clé hôte associée : une connexion recréée vers ce
+    // serveur réamorcera la confiance (utile après un changement de clé légitime).
+    if let Some(profile) = connections::get(&app, &id) {
+        known_hosts(&app).forget(&profile.host, profile.port);
+    }
     connections::delete(&app, &id)
 }
 
@@ -360,7 +302,7 @@ fn set_active_connection(
         Some(id) => {
             let profile =
                 connections::get(&app, &id).ok_or("Connexion introuvable.".to_string())?;
-            let resolved = resolve_remote(&profile)?;
+            let resolved = resolve_remote(&app, &profile)?;
             *target.conn.lock().unwrap() = Some(ActiveConn {
                 id,
                 target: resolved,
@@ -444,70 +386,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .manage(WebServerState {
-            config: Arc::new(Mutex::new(RuntimeConfig::default())),
-            handle: Mutex::new(None),
-            run_in_background: AtomicBool::new(true),
-        })
         .manage(ActiveTarget::default())
-        .setup(|app| {
-            let handle = app.handle().clone();
-            let settings = settings::load(&handle);
-            if let Err(err) = apply_web_server_state(&handle, &settings) {
-                eprintln!("web_server: impossible de démarrer le serveur web : {err}");
-            }
-
-            let show_item = MenuItem::with_id(app, "show", "Afficher Wraith", true, None::<&str>)?;
-            let quit_item = MenuItem::with_id(app, "quit", "Quitter", true, None::<&str>)?;
-            let tray_menu = Menu::with_items(app, &[&show_item, &quit_item])?;
-
-            TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
-                .menu(&tray_menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                    "quit" => app.exit(0),
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                })
-                .build(app)?;
-
-            if let Some(window) = app.get_webview_window("main") {
-                let app_handle = handle.clone();
-                window.on_window_event(move |event| {
-                    if let WindowEvent::CloseRequested { api, .. } = event {
-                        let state = app_handle.state::<WebServerState>();
-                        if state.run_in_background.load(Ordering::SeqCst) {
-                            api.prevent_close();
-                            if let Some(w) = app_handle.get_webview_window("main") {
-                                let _ = w.hide();
-                            }
-                        }
-                    }
-                });
-            }
-
-            Ok(())
-        })
         .invoke_handler(tauri::generate_handler![
             docker_ps,
             docker_start,
@@ -525,9 +404,6 @@ pub fn run() {
             docker_network_remove,
             docker_network_prune,
             disk_usage,
-            get_web_server_settings,
-            save_web_server_settings,
-            get_local_ip,
             system_tools,
             firewall_rules,
             firewall_open_port,

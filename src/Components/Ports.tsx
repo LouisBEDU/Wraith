@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   closeFirewallRule,
   getFirewallRules,
-  isTauri,
   openFirewallPort,
   setSshPort,
 } from "../lib/api";
@@ -263,17 +262,6 @@ export default function Ports() {
     } finally {
       setSettingSsh(false);
     }
-  }
-
-  if (!isTauri) {
-    return (
-      <div className="flex-1 min-h-0 min-w-0 overflow-y-auto p-4 sm:p-6 flex flex-col gap-5 sm:gap-6">
-        <Header t={t} onRefresh={reload} loading={loading} disabled />
-        <div className="card max-w-lg p-5 text-sm text-anthracite-500">
-          {t("ports.webOnlyDesktop")}
-        </div>
-      </div>
-    );
   }
 
   return (
