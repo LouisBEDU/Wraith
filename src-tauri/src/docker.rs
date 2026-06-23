@@ -73,6 +73,15 @@ pub fn logs_args(id: &str) -> Vec<String> {
         id.into(),
     ]
 }
+pub fn exec_args(id: &str, shell: &str, command: &str) -> Vec<String> {
+    vec![
+        "exec".into(),
+        id.into(),
+        shell.into(),
+        "-c".into(),
+        command.into(),
+    ]
+}
 
 // ─── Images / Volumes / Réseaux : arguments (chemin distant via docker_exec) ───
 
@@ -109,6 +118,19 @@ pub fn network_prune_args() -> Vec<String> {
 pub fn run_local(args: &[String]) -> Result<String, String> {
     let refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     run_docker_command(&refs)
+}
+
+/// Exécute une commande et renvoie stdout, stderr et le code de sortie sans
+/// traiter un code non nul comme une erreur : pour la console, on veut toujours
+/// afficher la sortie (y compris stderr) telle quelle, comme un terminal.
+pub fn exec_capture(args: &[String]) -> Result<(String, String, i32), String> {
+    let refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    let output = build_command(&refs).output().map_err(|e| e.to_string())?;
+    Ok((
+        String::from_utf8_lossy(&output.stdout).to_string(),
+        String::from_utf8_lossy(&output.stderr).to_string(),
+        output.status.code().unwrap_or(-1),
+    ))
 }
 
 pub fn merge_logs(stdout: &str, stderr: &str) -> String {

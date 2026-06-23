@@ -137,6 +137,44 @@ async fn docker_logs(target: State<'_, ActiveTarget>, id: String) -> Result<Stri
     }
 }
 
+#[derive(Serialize)]
+struct ExecOutput {
+    stdout: String,
+    stderr: String,
+    code: i32,
+}
+
+#[tauri::command]
+async fn docker_exec_command(
+    target: State<'_, ActiveTarget>,
+    id: String,
+    shell: String,
+    command: String,
+) -> Result<ExecOutput, String> {
+    let active = target.conn.lock().unwrap().clone();
+    let args = docker::exec_args(&id, &shell, &command);
+    match active {
+        None => tauri::async_runtime::spawn_blocking(move || {
+            docker::exec_capture(&args).map(|(stdout, stderr, code)| ExecOutput {
+                stdout,
+                stderr,
+                code,
+            })
+        })
+        .await
+        .map_err(|e| e.to_string())?,
+        Some(conn) => {
+            let cmd = remote_command("docker", &args);
+            let out = remote_admin::docker_run(&conn.target, &cmd).await?;
+            Ok(ExecOutput {
+                stdout: out.stdout,
+                stderr: out.stderr,
+                code: out.code,
+            })
+        }
+    }
+}
+
 // ─── Images ───
 
 #[tauri::command]
@@ -394,6 +432,7 @@ pub fn run() {
             docker_restart,
             docker_remove,
             docker_logs,
+            docker_exec_command,
             docker_images,
             docker_image_remove,
             docker_image_prune,

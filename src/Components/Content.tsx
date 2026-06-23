@@ -6,6 +6,7 @@ import StatsCards from "./StatsCards";
 import ContainersTable, { type ContainerAction } from "./ContainersTable";
 import ConfirmDialog from "./ConfirmDialog";
 import LogsDialog from "./LogsDialog";
+import ConsoleDialog from "./ConsoleDialog";
 import { RefreshIcon } from "./icons";
 import { useToast } from "../lib/toast";
 import { useResource } from "../lib/dockerData";
@@ -27,6 +28,7 @@ export default function Content() {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<DockerContainer | null>(null);
   const [logsContainer, setLogsContainer] = useState<DockerContainer | null>(null);
+  const [consoleContainer, setConsoleContainer] = useState<DockerContainer | null>(null);
 
   useEffect(() => {
     if (error) toast.error(friendlyDockerError(error, t));
@@ -96,9 +98,12 @@ export default function Content() {
         loading={loading}
         onAction={handleAction}
         onShowLogs={setLogsContainer}
+        onOpenConsole={setConsoleContainer}
       />
 
       <LogsDialog container={logsContainer} onClose={() => setLogsContainer(null)} />
+
+      <ConsoleDialog container={consoleContainer} onClose={() => setConsoleContainer(null)} />
 
       <ConfirmDialog
         open={pendingRemoval !== null}

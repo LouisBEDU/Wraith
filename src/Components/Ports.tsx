@@ -13,6 +13,7 @@ import { useResource } from "../lib/dockerData";
 import { friendlyDockerError } from "../lib/dockerError";
 import ConfirmDialog from "./ConfirmDialog";
 import DataTable, { type DataTableColumn } from "./DataTable";
+import Select from "./Select";
 import {
   AlertTriangleIcon,
   FirewallIcon,
@@ -347,14 +348,15 @@ export default function Ports() {
                 </label>
                 <label className="flex flex-col gap-1.5">
                   <span className="text-xs font-medium text-anthracite-500">{t("ports.protocol")}</span>
-                  <select
+                  <Select
                     value={protocol}
-                    onChange={(e) => setProtocol(e.target.value as Protocol)}
-                    className="rounded-lg border border-anthracite-100 px-3 py-2 text-sm text-anthracite-900 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                  >
-                    <option value="tcp">TCP</option>
-                    <option value="udp">UDP</option>
-                  </select>
+                    onChange={(v) => setProtocol(v as Protocol)}
+                    ariaLabel={t("ports.protocol")}
+                    options={[
+                      { value: "tcp", label: "TCP" },
+                      { value: "udp", label: "UDP" },
+                    ]}
+                  />
                 </label>
                 <button type="submit" className="btn btn-primary shrink-0" disabled={opening}>
                   <PlusIcon className="h-4 w-4" />

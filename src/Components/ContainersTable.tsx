@@ -2,7 +2,15 @@ import { useTranslation } from "react-i18next";
 import type { DockerContainer } from "../types/docker";
 import StatusBadge from "./StatusBadge";
 import DataTable, { type DataTableColumn } from "./DataTable";
-import { ContainersIcon, PlayIcon, RestartIcon, StopIcon, TerminalIcon, TrashIcon } from "./icons";
+import {
+  ContainersIcon,
+  LogsIcon,
+  PlayIcon,
+  RestartIcon,
+  StopIcon,
+  TerminalIcon,
+  TrashIcon,
+} from "./icons";
 
 export type ContainerAction = "start" | "stop" | "restart" | "remove";
 
@@ -12,6 +20,7 @@ type ContainersTableProps = {
   loading?: boolean;
   onAction: (container: DockerContainer, action: ContainerAction) => void;
   onShowLogs: (container: DockerContainer) => void;
+  onOpenConsole: (container: DockerContainer) => void;
 };
 
 export default function ContainersTable({
@@ -20,6 +29,7 @@ export default function ContainersTable({
   loading = false,
   onAction,
   onShowLogs,
+  onOpenConsole,
 }: ContainersTableProps) {
   const { t } = useTranslation();
 
@@ -73,6 +83,15 @@ export default function ContainersTable({
               title={t("table.logs")}
               className="icon-btn"
               onClick={() => onShowLogs(c)}
+            >
+              <LogsIcon className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              title={isRunning ? t("table.console") : t("table.consoleUnavailable")}
+              className="icon-btn"
+              disabled={!isRunning || isPending}
+              onClick={() => onOpenConsole(c)}
             >
               <TerminalIcon className="h-4 w-4" />
             </button>

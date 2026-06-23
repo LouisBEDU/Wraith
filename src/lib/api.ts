@@ -23,6 +23,20 @@ export async function dockerLogs(id: string): Promise<string> {
   return invoke<string>("docker_logs", { id });
 }
 
+export type ExecOutput = {
+  stdout: string;
+  stderr: string;
+  code: number;
+};
+
+export async function dockerExecCommand(
+  id: string,
+  shell: string,
+  command: string,
+): Promise<ExecOutput> {
+  return invoke<ExecOutput>("docker_exec_command", { id, shell, command });
+}
+
 // ─── Images ───
 
 export async function dockerImages(): Promise<string> {

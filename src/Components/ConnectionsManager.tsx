@@ -4,6 +4,7 @@ import { deleteConnection, saveConnection, testConnection } from "../lib/api";
 import { useConnections } from "../lib/connections";
 import { useToast } from "../lib/toast";
 import type { AuthMethod, ConnectionProfile } from "../types/connection";
+import Select from "./Select";
 import { CheckCircleIcon, TrashIcon } from "./icons";
 
 type FormState = {
@@ -248,14 +249,15 @@ export default function ConnectionsManager() {
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-anthracite-500">{t("conn.auth")}</span>
-            <select
+            <Select
               value={form.authMethod}
-              onChange={(e) => setForm({ ...form, authMethod: e.target.value as AuthMethod })}
-              className={inputClass}
-            >
-              <option value="key">{t("conn.authKey")}</option>
-              <option value="password">{t("conn.authPassword")}</option>
-            </select>
+              onChange={(v) => setForm({ ...form, authMethod: v as AuthMethod })}
+              ariaLabel={t("conn.auth")}
+              options={[
+                { value: "key", label: t("conn.authKey") },
+                { value: "password", label: t("conn.authPassword") },
+              ]}
+            />
           </label>
         </div>
 

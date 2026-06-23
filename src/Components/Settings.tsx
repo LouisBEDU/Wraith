@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import ConnectionsManager from "./ConnectionsManager";
+import Select from "./Select";
 import { useToast } from "../lib/toast";
 import { useUpdate } from "../lib/update";
 import { useSystemTools } from "../lib/systemTools";
@@ -68,14 +69,15 @@ export default function Settings() {
                 <span className="text-sm font-medium text-anthracite-900">
                   {t("settings.language")}
                 </span>
-                <select
+                <Select
                   value={currentLang}
-                  onChange={(e) => i18n.changeLanguage(e.target.value)}
-                  className="rounded-lg border border-anthracite-100 px-3 py-2 text-sm text-anthracite-900 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                >
-                  <option value="en">{t("settings.languageEnglish")}</option>
-                  <option value="fr">{t("settings.languageFrench")}</option>
-                </select>
+                  onChange={(v) => i18n.changeLanguage(v)}
+                  ariaLabel={t("settings.language")}
+                  options={[
+                    { value: "en", label: t("settings.languageEnglish") },
+                    { value: "fr", label: t("settings.languageFrench") },
+                  ]}
+                />
               </label>
 
               <div className="flex items-center justify-between gap-3 border-t border-anthracite-100 pt-4">

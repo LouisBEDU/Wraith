@@ -102,6 +102,8 @@
     "ports": "Ports",
     "actions": "Actions",
     "logs": "Logs",
+    "console": "Console",
+    "consoleUnavailable": "Console (conteneurs en cours uniquement)",
     "start": "Démarrer",
     "stop": "Arrêter",
     "restart": "Redémarrer",
@@ -115,6 +117,16 @@
     "copy": "Copier les logs",
     "jumpToLatest": "Voir les derniers logs",
     "lineCount": "{{count}} lignes affichées"
+  },
+  "consoleDialog": {
+    "title": "Console — {{name}}",
+    "subtitle": "Lance docker exec — chaque commande est indépendante.",
+    "placeholder": "Tape une commande…",
+    "run": "Exécuter",
+    "running": "Exécution…",
+    "clear": "Effacer la sortie",
+    "empty": "Tape une commande et appuie sur Entrée pour l'exécuter dans le conteneur.",
+    "exit": "code de sortie {{code}}"
   },
   "status": {
     "running": "En cours",
