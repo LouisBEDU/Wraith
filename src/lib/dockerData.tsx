@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { useConnections } from "./connections";
 
 type Status = "loading" | "success" | "error";
@@ -23,7 +24,20 @@ type EntryUpdater = (prev: Entry | undefined) => Entry;
 type DockerDataContextValue = {
   entries: Record<string, Entry>;
   setEntry: (name: string, updater: EntryUpdater) => void;
+  registerReload: (name: string, reload: () => void) => () => void;
+  consumeStale: (name: string) => boolean;
 };
+
+type DockerEvent = { type: string; action: string };
+
+const RESOURCE_FOR_TYPE: Record<string, string[]> = {
+  container: ["containers"],
+  image: ["images"],
+  volume: ["volumes"],
+  network: ["networks"],
+};
+
+const RELOAD_DEBOUNCE_MS = 300;
 
 const DockerDataContext = createContext<DockerDataContextValue | null>(null);
 
@@ -34,8 +48,63 @@ export function DockerDataProvider({ children }: { children: ReactNode }) {
     setEntries((all) => ({ ...all, [name]: updater(all[name]) }));
   }, []);
 
+  const reloaders = useRef<Map<string, Set<() => void>>>(new Map());
+  const timers = useRef<Map<string, number>>(new Map());
+  const stale = useRef<Set<string>>(new Set());
+
+  const registerReload = useCallback((name: string, reload: () => void) => {
+    let set = reloaders.current.get(name);
+    if (!set) {
+      set = new Set();
+      reloaders.current.set(name, set);
+    }
+    set.add(reload);
+    return () => {
+      set.delete(reload);
+      if (set.size === 0) reloaders.current.delete(name);
+    };
+  }, []);
+
+  const triggerReload = useCallback((name: string) => {
+    const pending = timers.current.get(name);
+    if (pending !== undefined) window.clearTimeout(pending);
+    const id = window.setTimeout(() => {
+      timers.current.delete(name);
+      const listeners = reloaders.current.get(name);
+      if (listeners && listeners.size > 0) {
+        stale.current.delete(name);
+        listeners.forEach((reload) => reload());
+      } else {
+        stale.current.add(name);
+      }
+    }, RELOAD_DEBOUNCE_MS);
+    timers.current.set(name, id);
+  }, []);
+
+  const consumeStale = useCallback((name: string) => {
+    const wasStale = stale.current.has(name);
+    stale.current.delete(name);
+    return wasStale;
+  }, []);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    listen<DockerEvent>("docker:event", (event) => {
+      const names = RESOURCE_FOR_TYPE[event.payload.type];
+      names?.forEach(triggerReload);
+    }).then((fn) => {
+      if (cancelled) fn();
+      else unlisten = fn;
+    });
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, [triggerReload]);
+
   return (
-    <DockerDataContext.Provider value={{ entries, setEntry }}>
+    <DockerDataContext.Provider value={{ entries, setEntry, registerReload, consumeStale }}>
       {children}
     </DockerDataContext.Provider>
   );
@@ -57,7 +126,7 @@ export type Resource<T> = {
 };
 
 export function useResource<T>(name: string, loader: () => Promise<T[]>): Resource<T> {
-  const { entries, setEntry } = useDockerData();
+  const { entries, setEntry, registerReload, consumeStale } = useDockerData();
   const { activeId } = useConnections();
 
   const entriesRef = useRef(entries);
@@ -85,11 +154,15 @@ export function useResource<T>(name: string, loader: () => Promise<T[]>): Resour
 
   useEffect(() => {
     const current = entriesRef.current[name];
-    if (current && current.status === "success" && current.loadedForId === activeId) {
+    const fresh =
+      current && current.status === "success" && current.loadedForId === activeId;
+    if (fresh && !consumeStale(name)) {
       return;
     }
     reload();
-  }, [name, activeId, reload]);
+  }, [name, activeId, reload, consumeStale]);
+
+  useEffect(() => registerReload(name, reload), [name, reload, registerReload]);
 
   const entry = entries[name];
   return {

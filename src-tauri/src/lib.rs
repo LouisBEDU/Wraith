@@ -1,6 +1,7 @@
 mod connections;
 mod disk;
 mod docker;
+mod events;
 mod firewall;
 mod known_hosts;
 mod remote;
@@ -9,6 +10,7 @@ mod ssh;
 #[cfg(target_os = "windows")]
 mod winproc;
 
+use events::EventsManager;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -25,8 +27,6 @@ struct ActiveConn {
     target: remote::Target,
 }
 
-/// Magasin d'empreintes de clés hôtes SSH (Trust On First Use), stocké à côté
-/// des autres données de configuration de l'application.
 fn known_hosts(app: &AppHandle) -> known_hosts::KnownHosts {
     let path = app
         .path()
@@ -310,16 +310,22 @@ fn connection_save(
 fn connection_delete(
     app: AppHandle,
     target: State<'_, ActiveTarget>,
+    events: State<'_, EventsManager>,
     id: String,
 ) -> Result<(), String> {
-    {
+    let was_active = {
         let mut guard = target.conn.lock().unwrap();
-        if guard.as_ref().is_some_and(|c| c.id == id) {
+        let active = guard.as_ref().is_some_and(|c| c.id == id);
+        if active {
             *guard = None;
         }
+        active
+    };
+
+    if was_active {
+        events.restart(app.clone(), None);
     }
-    // Oublie l'empreinte de clé hôte associée : une connexion recréée vers ce
-    // serveur réamorcera la confiance (utile après un changement de clé légitime).
+
     if let Some(profile) = connections::get(&app, &id) {
         known_hosts(&app).forget(&profile.host, profile.port);
     }
@@ -330,11 +336,13 @@ fn connection_delete(
 fn set_active_connection(
     app: AppHandle,
     target: State<'_, ActiveTarget>,
+    events: State<'_, EventsManager>,
     id: Option<String>,
 ) -> Result<(), String> {
     match id {
         None => {
             *target.conn.lock().unwrap() = None;
+            events.restart(app.clone(), None);
             Ok(())
         }
         Some(id) => {
@@ -343,8 +351,10 @@ fn set_active_connection(
             let resolved = resolve_remote(&app, &profile)?;
             *target.conn.lock().unwrap() = Some(ActiveConn {
                 id,
-                target: resolved,
+                target: resolved.clone(),
             });
+
+            events.restart(app.clone(), Some(resolved));
             Ok(())
         }
     }
@@ -425,6 +435,12 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(ActiveTarget::default())
+        .manage(EventsManager::default())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            app.state::<EventsManager>().restart(handle, None);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             docker_ps,
             docker_start,

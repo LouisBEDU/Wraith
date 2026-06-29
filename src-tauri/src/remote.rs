@@ -107,15 +107,13 @@ pub async fn run(
     exec(host, port, user, auth, command, None, known_hosts).await
 }
 
-async fn exec(
+async fn connect(
     host: &str,
     port: u16,
     user: &str,
     auth: &Auth,
-    command: &str,
-    stdin: Option<&[u8]>,
     known_hosts: &KnownHosts,
-) -> Result<RemoteOutput, String> {
+) -> Result<client::Handle<Handler>, String> {
     let config = Arc::new(client::Config::default());
 
     let rejection = Arc::new(Mutex::new(None));
@@ -129,8 +127,6 @@ async fn exec(
     let mut session = match client::connect(config, (host, port), handler).await {
         Ok(session) => session,
         Err(err) => {
-            // Une clé hôte rejetée fait échouer `connect` : on privilégie le
-            // message explicite si la vérification a posé un veto.
             if let Some(message) = rejection.lock().unwrap().take() {
                 return Err(message);
             }
@@ -161,6 +157,68 @@ async fn exec(
     if !result.success() {
         return Err("Authentification refusée (identifiants invalides).".into());
     }
+
+    Ok(session)
+}
+
+pub async fn stream_target<F: FnMut(&str)>(
+    target: &Target,
+    command: &str,
+    cancel: &mut tokio::sync::watch::Receiver<bool>,
+    mut on_line: F,
+) -> Result<(), String> {
+    let session = connect(
+        &target.host,
+        target.port,
+        &target.username,
+        &target.auth,
+        &target.known_hosts,
+    )
+    .await?;
+
+    let mut channel = session
+        .channel_open_session()
+        .await
+        .map_err(|e| e.to_string())?;
+    channel.exec(true, command).await.map_err(|e| e.to_string())?;
+
+    let mut buf: Vec<u8> = Vec::new();
+    loop {
+        tokio::select! {
+            changed = cancel.changed() => {
+                if changed.is_err() || *cancel.borrow() {
+                    break;
+                }
+            }
+            msg = channel.wait() => {
+                match msg {
+                    Some(russh::ChannelMsg::Data { ref data }) => {
+                        buf.extend_from_slice(data);
+                        while let Some(pos) = buf.iter().position(|&b| b == b'\n') {
+                            let line: Vec<u8> = buf.drain(..=pos).collect();
+                            on_line(String::from_utf8_lossy(&line).trim());
+                        }
+                    }
+                    Some(_) => {}
+                    None => break,
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn exec(
+    host: &str,
+    port: u16,
+    user: &str,
+    auth: &Auth,
+    command: &str,
+    stdin: Option<&[u8]>,
+    known_hosts: &KnownHosts,
+) -> Result<RemoteOutput, String> {
+    let session = connect(host, port, user, auth, known_hosts).await?;
 
     let mut channel = session
         .channel_open_session()
