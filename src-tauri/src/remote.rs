@@ -63,9 +63,6 @@ struct Handler {
     host: String,
     port: u16,
     known_hosts: KnownHosts,
-    /// Renseigné si la clé serveur est rejetée (empreinte changée), pour
-    /// remonter un message explicite : `check_server_key` ne peut renvoyer
-    /// qu'un booléen.
     rejection: Arc<Mutex<Option<String>>>,
 }
 
@@ -207,6 +204,80 @@ pub async fn stream_target<F: FnMut(&str)>(
     }
 
     Ok(())
+}
+
+pub struct RemoteShell {
+    _session: client::Handle<Handler>,
+    channel: russh::Channel<russh::client::Msg>,
+}
+
+impl RemoteShell {
+    pub async fn open(target: &Target, command: &str) -> Result<Self, String> {
+        let session = connect(
+            &target.host,
+            target.port,
+            &target.username,
+            &target.auth,
+            &target.known_hosts,
+        )
+        .await?;
+        let channel = session
+            .channel_open_session()
+            .await
+            .map_err(|e| e.to_string())?;
+        channel
+            .exec(false, command)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(Self {
+            _session: session,
+            channel,
+        })
+    }
+
+    pub async fn open_pty(target: &Target, command: &str) -> Result<Self, String> {
+        let session = connect(
+            &target.host,
+            target.port,
+            &target.username,
+            &target.auth,
+            &target.known_hosts,
+        )
+        .await?;
+        let channel = session
+            .channel_open_session()
+            .await
+            .map_err(|e| e.to_string())?;
+        channel
+            .request_pty(true, "xterm-256color", 120, 30, 0, 0, &[])
+            .await
+            .map_err(|e| e.to_string())?;
+        channel
+            .exec(true, command)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(Self {
+            _session: session,
+            channel,
+        })
+    }
+
+    pub async fn write(&mut self, data: &[u8]) -> Result<(), String> {
+        self.channel.data(data).await.map_err(|e| e.to_string())
+    }
+
+    pub async fn next_chunk(&mut self) -> Option<(bool, Vec<u8>)> {
+        loop {
+            match self.channel.wait().await {
+                Some(russh::ChannelMsg::Data { ref data }) => return Some((false, data.to_vec())),
+                Some(russh::ChannelMsg::ExtendedData { ref data, .. }) => {
+                    return Some((true, data.to_vec()))
+                }
+                Some(_) => continue,
+                None => return None,
+            }
+        }
+    }
 }
 
 async fn exec(

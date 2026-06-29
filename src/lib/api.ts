@@ -37,6 +37,40 @@ export async function dockerExecCommand(
   return invoke<ExecOutput>("docker_exec_command", { id, shell, command });
 }
 
+export async function consoleOpen(containerId: string, shell: string): Promise<string> {
+  return invoke<string>("console_open", { containerId, shell });
+}
+
+export async function consoleExec(id: string, command: string): Promise<ExecOutput> {
+  return invoke<ExecOutput>("console_exec", { id, command });
+}
+
+export async function consoleClose(id: string): Promise<void> {
+  await invoke("console_close", { id });
+}
+
+export type AttachOutput = {
+  id: string;
+  data: string;
+  err: boolean;
+};
+
+export async function attachOpen(containerId: string): Promise<string> {
+  return invoke<string>("attach_open", { containerId });
+}
+
+export async function attachWrite(id: string, data: string): Promise<void> {
+  await invoke("attach_write", { id, data });
+}
+
+export async function attachClose(id: string): Promise<void> {
+  await invoke("attach_close", { id });
+}
+
+export async function containerAttachable(id: string): Promise<boolean> {
+  return invoke<boolean>("container_attachable", { id });
+}
+
 // ─── Images ───
 
 export async function dockerImages(): Promise<string> {

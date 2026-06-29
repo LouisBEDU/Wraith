@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { dockerExecCommand } from "../lib/api";
+import { consoleClose, consoleExec, consoleOpen, containerAttachable } from "../lib/api";
 import { friendlyDockerError } from "../lib/dockerError";
 import type { DockerContainer } from "../types/docker";
 import Select from "./Select";
+import ServerConsole from "./ServerConsole";
 import Tooltip from "./Tooltip";
 import { CloseIcon, TerminalIcon, TrashIcon } from "./icons";
 
@@ -11,6 +12,8 @@ type ConsoleDialogProps = {
   container: DockerContainer | null;
   onClose: () => void;
 };
+
+type Mode = "server" | "shell";
 
 type Entry = {
   id: number;
@@ -25,6 +28,8 @@ const SHELLS = ["sh", "bash"] as const;
 
 export default function ConsoleDialog({ container, onClose }: ConsoleDialogProps) {
   const { t } = useTranslation();
+  const [mode, setMode] = useState<Mode>("server");
+  const [serverAvailable, setServerAvailable] = useState<boolean | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [input, setInput] = useState("");
   const [shell, setShell] = useState<string>("sh");
@@ -34,39 +39,115 @@ export default function ConsoleDialog({ container, onClose }: ConsoleDialogProps
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
+  const sessionRef = useRef<string | null>(null);
+  const [opening, setOpening] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
-  // Réinitialise la console à chaque conteneur ouvert.
   useEffect(() => {
+    setMode("server");
+    setServerAvailable(null);
     setEntries([]);
     setInput("");
     setHistory([]);
     setHistoryIndex(null);
     nextId.current = 0;
     if (container) {
-      // Laisse le temps au dialogue de se monter avant de focus.
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [container?.ID]);
 
-  // Auto-scroll en bas à chaque nouvelle sortie.
+  useEffect(() => {
+    if (!container) return;
+    let active = true;
+    containerAttachable(container.ID)
+      .then((ok) => {
+        if (!active) return;
+        setServerAvailable(ok);
+        if (!ok) setMode("shell");
+      })
+      .catch(() => {
+        if (!active) return;
+        setServerAvailable(false);
+        setMode("shell");
+      });
+    return () => {
+      active = false;
+    };
+  }, [container?.ID]);
+
+  useEffect(() => {
+    if (!container || mode !== "shell") return;
+    let active = true;
+    sessionRef.current = null;
+    setSessionError(null);
+    setOpening(true);
+    consoleOpen(container.ID, shell)
+      .then((id) => {
+        if (!active) {
+          consoleClose(id);
+          return;
+        }
+        sessionRef.current = id;
+      })
+      .catch((err) => {
+        if (active) setSessionError(friendlyDockerError(err, t));
+      })
+      .finally(() => {
+        if (active) setOpening(false);
+      });
+    return () => {
+      active = false;
+      if (sessionRef.current) {
+        consoleClose(sessionRef.current);
+        sessionRef.current = null;
+      }
+    };
+  }, [container?.ID, shell, mode]);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [entries, running]);
 
+  async function reopenSession() {
+    const old = sessionRef.current;
+    sessionRef.current = null;
+    if (old) await consoleClose(old).catch(() => {});
+    if (!container) return;
+    try {
+      sessionRef.current = await consoleOpen(container.ID, shell);
+      setSessionError(null);
+    } catch {
+      sessionRef.current = null;
+    }
+  }
+
   async function run() {
     const command = input.trim();
-    if (!command || running || !container) return;
+    if (!command || running || opening || !container) return;
+
+    let sid = sessionRef.current;
+    if (!sid) {
+      try {
+        sid = await consoleOpen(container.ID, shell);
+        sessionRef.current = sid;
+        setSessionError(null);
+      } catch (err) {
+        pushEntry({ command, stdout: "", stderr: friendlyDockerError(err, t), code: -1 });
+        return;
+      }
+    }
 
     setHistory((h) => [...h, command]);
     setHistoryIndex(null);
     setInput("");
     setRunning(true);
     try {
-      const out = await dockerExecCommand(container.ID, shell, command);
+      const out = await consoleExec(sid, command);
       pushEntry({ command, stdout: out.stdout, stderr: out.stderr, code: out.code });
     } catch (err) {
       pushEntry({ command, stdout: "", stderr: friendlyDockerError(err, t), code: -1 });
+      await reopenSession();
     } finally {
       setRunning(false);
       requestAnimationFrame(() => inputRef.current?.focus());
@@ -122,21 +203,41 @@ export default function ConsoleDialog({ container, onClose }: ConsoleDialogProps
               <TerminalIcon className="h-4 w-4 shrink-0 text-anthracite-400" />
               {t("consoleDialog.title", { name: container.Names })}
             </h2>
-            <p className="mt-0.5 truncate text-xs text-anthracite-400">
-              {t("consoleDialog.subtitle")}
-            </p>
+            <div className="mt-1.5 flex gap-1">
+              {(["server", "shell"] as const).map((m) => {
+                const serverDisabled = m === "server" && serverAvailable === false;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMode(m)}
+                    disabled={serverDisabled}
+                    title={serverDisabled ? t("serverConsole.unavailable") : undefined}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                      mode === m
+                        ? "bg-anthracite-900 text-paper"
+                        : "text-anthracite-500 hover:bg-anthracite-100"
+                    }`}
+                  >
+                    {t(m === "server" ? "consoleDialog.tabServer" : "consoleDialog.tabShell")}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <Tooltip label={t("consoleDialog.clear")}>
-              <button
-                type="button"
-                className="icon-btn"
-                onClick={() => setEntries([])}
-                disabled={entries.length === 0}
-              >
-                <TrashIcon className="h-4 w-4" />
-              </button>
-            </Tooltip>
+            {mode === "shell" && (
+              <Tooltip label={t("consoleDialog.clear")}>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => setEntries([])}
+                  disabled={entries.length === 0}
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </Tooltip>
+            )}
             <button
               type="button"
               className="icon-btn"
@@ -148,13 +249,27 @@ export default function ConsoleDialog({ container, onClose }: ConsoleDialogProps
           </div>
         </div>
 
+        {mode === "server" ? (
+          serverAvailable === true ? (
+            <ServerConsole container={container} />
+          ) : (
+            <div className="flex min-h-0 flex-1 items-center justify-center bg-anthracite-950 px-6 text-center font-mono text-xs text-paper/40">
+              {serverAvailable === null
+                ? t("serverConsole.checking")
+                : t("serverConsole.unavailable")}
+            </div>
+          )
+        ) : (
+        <>
         <div
           ref={scrollRef}
           className="min-h-0 flex-1 overflow-auto bg-anthracite-950 px-4 py-3 font-mono text-xs leading-relaxed"
           onClick={() => inputRef.current?.focus()}
         >
-          {entries.length === 0 && !running ? (
-            <p className="text-paper/40">{t("consoleDialog.empty")}</p>
+          {entries.length === 0 && !running && !sessionError ? (
+            <p className="text-paper/40">
+              {opening ? t("consoleDialog.connecting") : t("consoleDialog.empty")}
+            </p>
           ) : (
             entries.map((e) => (
               <div key={e.id} className="mb-2">
@@ -182,6 +297,9 @@ export default function ConsoleDialog({ container, onClose }: ConsoleDialogProps
               {t("consoleDialog.running")}
             </div>
           )}
+          {sessionError && (
+            <p className="mt-1 whitespace-pre-wrap break-all text-status-error">{sessionError}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-2 border-t border-anthracite-100 px-3 py-2.5">
@@ -202,17 +320,20 @@ export default function ConsoleDialog({ container, onClose }: ConsoleDialogProps
             spellCheck={false}
             autoComplete="off"
             autoCapitalize="off"
-            className="min-w-0 flex-1 rounded-lg border border-anthracite-100 px-3 py-2 font-mono text-sm text-anthracite-900 focus:outline-none focus:ring-2 focus:ring-accent-500"
+            disabled={opening}
+            className="min-w-0 flex-1 rounded-lg border border-anthracite-100 px-3 py-2 font-mono text-sm text-anthracite-900 focus:outline-none focus:ring-2 focus:ring-accent-500 disabled:opacity-60"
           />
           <button
             type="button"
             className="btn btn-primary shrink-0"
             onClick={run}
-            disabled={running || input.trim() === ""}
+            disabled={running || opening || input.trim() === ""}
           >
             {running ? t("consoleDialog.running") : t("consoleDialog.run")}
           </button>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

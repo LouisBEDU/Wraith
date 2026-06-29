@@ -1,6 +1,6 @@
 [package]
 name = "Wraith"
-version = "0.2.3"
+version = "0.2.4"
 description = "A Tauri App"
 authors = ["Dubsinho"]
 edition = "2024"
@@ -26,5 +26,6 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rand = "0.8"
 tokio = { version = "1", features = ["process", "io-util", "sync", "time", "macros"] }
+portable-pty = "0.8"
 russh = { version = "0.60", default-features = false, features = ["ring", "flate2", "rsa"] }
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }

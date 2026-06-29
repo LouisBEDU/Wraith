@@ -1,4 +1,6 @@
+mod attach;
 mod connections;
+mod console;
 mod disk;
 mod docker;
 mod events;
@@ -10,6 +12,8 @@ mod ssh;
 #[cfg(target_os = "windows")]
 mod winproc;
 
+use attach::AttachManager;
+use console::ConsoleManager;
 use events::EventsManager;
 use serde::Serialize;
 use std::path::PathBuf;
@@ -175,6 +179,85 @@ async fn docker_exec_command(
     }
 }
 
+#[tauri::command]
+async fn console_open(
+    target: State<'_, ActiveTarget>,
+    console: State<'_, ConsoleManager>,
+    container_id: String,
+    shell: String,
+) -> Result<String, String> {
+    let active = target.conn.lock().unwrap().clone();
+    match active {
+        None => console.open_local(&container_id, &shell).await,
+        Some(conn) => console.open_remote(&conn.target, &container_id, &shell).await,
+    }
+}
+
+#[tauri::command]
+async fn console_exec(
+    console: State<'_, ConsoleManager>,
+    id: String,
+    command: String,
+) -> Result<console::ExecOutput, String> {
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(60),
+        console.exec(&id, &command),
+    )
+    .await
+    {
+        Ok(result) => result,
+        Err(_) => Err(
+            "Délai dépassé : commande interactive ou incomplète non prise en charge.".to_string(),
+        ),
+    }
+}
+
+#[tauri::command]
+async fn console_close(console: State<'_, ConsoleManager>, id: String) -> Result<(), String> {
+    console.close(&id).await;
+    Ok(())
+}
+
+#[tauri::command]
+async fn attach_open(
+    app: AppHandle,
+    target: State<'_, ActiveTarget>,
+    attach: State<'_, AttachManager>,
+    container_id: String,
+) -> Result<String, String> {
+    let active = target.conn.lock().unwrap().clone();
+    match active {
+        None => attach.open_local(app, &container_id),
+        Some(conn) => attach.open_remote(app, &conn.target, &container_id).await,
+    }
+}
+
+#[tauri::command]
+async fn attach_write(
+    attach: State<'_, AttachManager>,
+    id: String,
+    data: String,
+) -> Result<(), String> {
+    attach.write(&id, data.into_bytes()).await
+}
+
+#[tauri::command]
+fn attach_close(attach: State<'_, AttachManager>, id: String) {
+    attach.close(&id);
+}
+
+#[tauri::command]
+async fn container_attachable(target: State<'_, ActiveTarget>, id: String) -> Result<bool, String> {
+    let args = vec![
+        "inspect".to_string(),
+        "-f".to_string(),
+        "{{.Config.OpenStdin}}".to_string(),
+        id,
+    ];
+    let out = docker_exec(&target, args).await?;
+    Ok(out.trim() == "true")
+}
+
 // ─── Images ───
 
 #[tauri::command]
@@ -307,10 +390,12 @@ fn connection_save(
 }
 
 #[tauri::command]
-fn connection_delete(
+async fn connection_delete(
     app: AppHandle,
     target: State<'_, ActiveTarget>,
     events: State<'_, EventsManager>,
+    console: State<'_, ConsoleManager>,
+    attach: State<'_, AttachManager>,
     id: String,
 ) -> Result<(), String> {
     let was_active = {
@@ -323,6 +408,8 @@ fn connection_delete(
     };
 
     if was_active {
+        console.close_all().await;
+        attach.close_all();
         events.restart(app.clone(), None);
     }
 
@@ -333,12 +420,16 @@ fn connection_delete(
 }
 
 #[tauri::command]
-fn set_active_connection(
+async fn set_active_connection(
     app: AppHandle,
     target: State<'_, ActiveTarget>,
     events: State<'_, EventsManager>,
+    console: State<'_, ConsoleManager>,
+    attach: State<'_, AttachManager>,
     id: Option<String>,
 ) -> Result<(), String> {
+    console.close_all().await;
+    attach.close_all();
     match id {
         None => {
             *target.conn.lock().unwrap() = None;
@@ -436,6 +527,8 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(ActiveTarget::default())
         .manage(EventsManager::default())
+        .manage(ConsoleManager::default())
+        .manage(AttachManager::default())
         .setup(|app| {
             let handle = app.handle().clone();
             app.state::<EventsManager>().restart(handle, None);
@@ -449,6 +542,13 @@ pub fn run() {
             docker_remove,
             docker_logs,
             docker_exec_command,
+            console_open,
+            console_exec,
+            console_close,
+            attach_open,
+            attach_write,
+            attach_close,
+            container_attachable,
             docker_images,
             docker_image_remove,
             docker_image_prune,

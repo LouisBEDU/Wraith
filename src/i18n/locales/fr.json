@@ -97,6 +97,7 @@
   "dockerError": {
     "daemonDown": "Docker ne répond pas. Vérifiez que Docker Desktop (ou le service Docker) est bien démarré, puis réessayez.",
     "containerNotFound": "Ce conteneur n'existe plus. Actualisez la liste.",
+    "execFailed": "Impossible de lancer un shell dans ce conteneur : l'image n'en contient pas (ex. distroless). Essayez l'autre shell, ou il n'y en a tout simplement pas.",
     "resourceInUse": "Élément encore utilisé par un conteneur. Arrêtez et supprimez le(s) conteneur(s) qui l'utilisent, puis réessayez.",
     "generic": "Une erreur Docker est survenue."
   },
@@ -126,13 +127,25 @@
   },
   "consoleDialog": {
     "title": "Console — {{name}}",
-    "subtitle": "Lance docker exec — chaque commande est indépendante.",
+    "subtitle": "Shell persistant — cd et environnement conservés entre les commandes.",
+    "tabServer": "Console serveur",
+    "tabShell": "Shell",
     "placeholder": "Tape une commande…",
     "run": "Exécuter",
     "running": "Exécution…",
+    "connecting": "Ouverture de la session shell…",
     "clear": "Effacer la sortie",
     "empty": "Tape une commande et appuie sur Entrée pour l'exécuter dans le conteneur.",
     "exit": "code de sortie {{code}}"
+  },
+  "serverConsole": {
+    "connecting": "Connexion à la console du serveur…",
+    "closed": "Console détachée.",
+    "error": "Impossible de se connecter à la console.",
+    "checking": "Vérification du conteneur…",
+    "unavailable": "Ce conteneur a été lancé sans stdin ouvert : impossible de s'attacher à sa console.",
+    "placeholder": "Envoie une commande au serveur (ex. op Pseudo)…",
+    "send": "Envoyer"
   },
   "status": {
     "running": "En cours",

@@ -10,7 +10,15 @@ const DAEMON_DOWN_PATTERNS = [
   /le fichier spécifié est introuvable/i,
 ];
 
-const NOT_FOUND_PATTERNS = [/no such container/i, /not found/i];
+const NOT_FOUND_PATTERNS = [/no such (?:container|image|volume|network|object)/i];
+
+const EXEC_FAILED_PATTERNS = [
+  /oci runtime exec failed/i,
+  /executable file not found/i,
+  /exec: .*not found/i,
+  /exec process is not started/i,
+  /exec format error/i,
+];
 
 const IN_USE_PATTERNS = [
   /volume is in use/i,
@@ -24,6 +32,10 @@ export function friendlyDockerError(err: unknown, t: TFunction): string {
 
   if (DAEMON_DOWN_PATTERNS.some((p) => p.test(raw))) {
     return t("dockerError.daemonDown");
+  }
+
+  if (EXEC_FAILED_PATTERNS.some((p) => p.test(raw))) {
+    return t("dockerError.execFailed");
   }
 
   if (IN_USE_PATTERNS.some((p) => p.test(raw))) {

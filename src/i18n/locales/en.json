@@ -97,6 +97,7 @@
   "dockerError": {
     "daemonDown": "Docker isn't responding. Make sure Docker Desktop (or the Docker service) is running, then try again.",
     "containerNotFound": "This container no longer exists. Refresh the list.",
+    "execFailed": "Can't run a shell in this container: the image has no shell (e.g. distroless). Try the other shell, or it simply isn't available.",
     "resourceInUse": "Still in use by a container. Stop and remove the container(s) using it, then try again.",
     "generic": "A Docker error occurred."
   },
@@ -126,13 +127,25 @@
   },
   "consoleDialog": {
     "title": "Console — {{name}}",
-    "subtitle": "Runs docker exec — each command is independent.",
+    "subtitle": "Persistent shell — cd and environment are kept between commands.",
+    "tabServer": "Server console",
+    "tabShell": "Shell",
     "placeholder": "Type a command…",
     "run": "Run",
     "running": "Running…",
+    "connecting": "Opening shell session…",
     "clear": "Clear output",
     "empty": "Type a command and press Enter to run it inside the container.",
     "exit": "exit {{code}}"
+  },
+  "serverConsole": {
+    "connecting": "Attaching to the server console…",
+    "closed": "Console detached.",
+    "error": "Could not attach to the console.",
+    "checking": "Checking the container…",
+    "unavailable": "This container was started without an open stdin, so its console can't be attached.",
+    "placeholder": "Send a command to the server (e.g. op Player)…",
+    "send": "Send"
   },
   "status": {
     "running": "Running",
