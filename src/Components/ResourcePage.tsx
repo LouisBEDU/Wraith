@@ -4,6 +4,7 @@ import { useToast } from "../lib/toast";
 import { useResource } from "../lib/dockerData";
 import { friendlyDockerError } from "../lib/dockerError";
 import DataTable, { type DataTableColumn } from "./DataTable";
+import type { ContextMenuItem } from "./ContextMenu";
 import ConfirmDialog from "./ConfirmDialog";
 import { RefreshIcon, TrashIcon } from "./icons";
 
@@ -145,6 +146,16 @@ export default function ResourcePage<T>({
         rowKey={rowKey}
         minWidth={minWidth}
         loading={loading}
+        rowActions={(row): ContextMenuItem[] => [
+          {
+            id: "remove",
+            label: remove.confirmLabel,
+            icon: <TrashIcon className="h-4 w-4" />,
+            danger: true,
+            disabled: pendingKey === rowKey(row),
+            onSelect: () => setPendingDelete(row),
+          },
+        ]}
         empty={
           <>
             {emptyIcon}

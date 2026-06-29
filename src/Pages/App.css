@@ -40,6 +40,19 @@
 @layer base {
   body {
     @apply bg-paper text-anthracite-900;
+
+    /* Sélection de texte désactivée par défaut (application de bureau). */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Seuls les tableaux et les champs de saisie restent sélectionnables. */
+  table,
+  input,
+  textarea,
+  [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   @supports not selector(::-webkit-scrollbar) {

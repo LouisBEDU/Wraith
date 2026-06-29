@@ -3,6 +3,12 @@
     "cancel": "Cancel",
     "confirm": "Confirm"
   },
+  "contextMenu": {
+    "copyCell": "Copy cell",
+    "copyRow": "Copy row",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Copy failed"
+  },
   "nav": {
     "containers": "Containers",
     "ports": "Ports",

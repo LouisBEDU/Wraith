@@ -5,6 +5,7 @@ import { useConnections } from "../lib/connections";
 import { useToast } from "../lib/toast";
 import type { AuthMethod, ConnectionProfile } from "../types/connection";
 import Select from "./Select";
+import Tooltip from "./Tooltip";
 import { CheckCircleIcon, TrashIcon } from "./icons";
 
 type FormState = {
@@ -187,14 +188,15 @@ export default function ConnectionsManager() {
             >
               {t("conn.edit")}
             </button>
-            <button
-              type="button"
-              className="icon-btn shrink-0 hover:bg-status-error-soft! hover:text-status-error!"
-              title={t("conn.delete")}
-              onClick={() => handleDelete(p)}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
+            <Tooltip label={t("conn.delete")}>
+              <button
+                type="button"
+                className="icon-btn shrink-0 hover:bg-status-error-soft! hover:text-status-error!"
+                onClick={() => handleDelete(p)}
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </Tooltip>
           </div>
         ))}
       </div>

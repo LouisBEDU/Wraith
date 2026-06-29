@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import "./App.css";
 import Content from "../Components/Content";
 import Images from "../Components/Images";
@@ -21,6 +21,16 @@ const PAGES: Record<Page, ReactNode> = {
 
 export default function App() {
   const [page, setPage] = useState<Page>("containers");
+
+  useEffect(() => {
+    function onContextMenu(e: MouseEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('input, textarea, [contenteditable="true"]')) return;
+      e.preventDefault();
+    }
+    document.addEventListener("contextmenu", onContextMenu);
+    return () => document.removeEventListener("contextmenu", onContextMenu);
+  }, []);
 
   return (
     <main className="h-screen flex flex-col bg-paper">

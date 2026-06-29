@@ -4,6 +4,7 @@ import { dockerNetworkPrune, dockerNetworkRemove, dockerNetworks } from "../lib/
 import { parseDockerNetworks, PROTECTED_NETWORKS, type DockerNetwork } from "../types/docker";
 import type { DataTableColumn } from "./DataTable";
 import ResourcePage from "./ResourcePage";
+import Tooltip from "./Tooltip";
 import { NetworksIcon, TrashIcon } from "./icons";
 
 export default function Networks() {
@@ -60,15 +61,16 @@ export default function Networks() {
               {protectedNet ? (
                 <span className="badge badge-stopped">{t("networks.systemBadge")}</span>
               ) : (
-                <button
-                  type="button"
-                  title={t("networks.remove")}
-                  className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
-                  disabled={pendingKey === net.ID}
-                  onClick={() => requestRemove(net)}
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
+                <Tooltip label={t("networks.remove")}>
+                  <button
+                    type="button"
+                    className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
+                    disabled={pendingKey === net.ID}
+                    onClick={() => requestRemove(net)}
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </Tooltip>
               )}
             </div>
           );

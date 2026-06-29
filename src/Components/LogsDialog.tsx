@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { dockerLogs } from "../lib/api";
 import { friendlyDockerError } from "../lib/dockerError";
 import type { DockerContainer } from "../types/docker";
+import Tooltip from "./Tooltip";
 import { CheckCircleIcon, CloseIcon, CopyIcon, RefreshIcon, TerminalIcon } from "./icons";
 
 type LogsDialogProps = {
@@ -188,22 +189,25 @@ export default function LogsDialog({ container, onClose }: LogsDialogProps) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <button type="button" className="icon-btn" onClick={handleCopy} title={t("logsDialog.copy")}>
-              {copied ? (
-                <CheckCircleIcon className="h-4 w-4 text-status-running" />
-              ) : (
-                <CopyIcon className="h-4 w-4" />
-              )}
-            </button>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => load(container.ID, false)}
-              disabled={loading}
-              title={t("content.refresh")}
-            >
-              <RefreshIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </button>
+            <Tooltip label={t("logsDialog.copy")}>
+              <button type="button" className="icon-btn" onClick={handleCopy}>
+                {copied ? (
+                  <CheckCircleIcon className="h-4 w-4 text-status-running" />
+                ) : (
+                  <CopyIcon className="h-4 w-4" />
+                )}
+              </button>
+            </Tooltip>
+            <Tooltip label={t("content.refresh")}>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => load(container.ID, false)}
+                disabled={loading}
+              >
+                <RefreshIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              </button>
+            </Tooltip>
             <button
               type="button"
               className="icon-btn"

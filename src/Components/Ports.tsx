@@ -13,7 +13,9 @@ import { useResource } from "../lib/dockerData";
 import { friendlyDockerError } from "../lib/dockerError";
 import ConfirmDialog from "./ConfirmDialog";
 import DataTable, { type DataTableColumn } from "./DataTable";
+import type { ContextMenuItem } from "./ContextMenu";
 import Select from "./Select";
+import Tooltip from "./Tooltip";
 import {
   AlertTriangleIcon,
   FirewallIcon,
@@ -136,24 +138,27 @@ export default function Ports() {
                 {ipVersions.map((version) => {
                   const present = Boolean(group.byVersion[version]);
                   return (
-                    <button
+                    <Tooltip
                       key={version}
-                      type="button"
-                      role="switch"
-                      aria-checked={present}
-                      disabled={!canManage || pendingKey === group.key}
-                      onClick={() => toggleVersion(group, version, present)}
-                      title={t(present ? "ports.versionOn" : "ports.versionOff", {
+                      label={t(present ? "ports.versionOn" : "ports.versionOff", {
                         version: versionLabel(version),
                       })}
-                      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-40 ${
-                        present
-                          ? "border-status-running bg-status-running-soft text-status-running"
-                          : "border-anthracite-200 text-anthracite-400 hover:border-anthracite-300"
-                      }`}
                     >
-                      {versionLabel(version)}
-                    </button>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={present}
+                        disabled={!canManage || pendingKey === group.key}
+                        onClick={() => toggleVersion(group, version, present)}
+                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-40 ${
+                          present
+                            ? "border-status-running bg-status-running-soft text-status-running"
+                            : "border-anthracite-200 text-anthracite-400 hover:border-anthracite-300"
+                        }`}
+                      >
+                        {versionLabel(version)}
+                      </button>
+                    </Tooltip>
                   );
                 })}
               </div>
@@ -182,15 +187,16 @@ export default function Ports() {
       className: "whitespace-nowrap",
       cell: (group) => (
         <div className="flex items-center justify-end">
-          <button
-            type="button"
-            title={t("ports.close")}
-            className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
-            disabled={!canManage || pendingKey === group.key}
-            onClick={() => setPendingDelete(group)}
-          >
-            <TrashIcon className="h-4 w-4" />
-          </button>
+          <Tooltip label={t("ports.close")}>
+            <button
+              type="button"
+              className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
+              disabled={!canManage || pendingKey === group.key}
+              onClick={() => setPendingDelete(group)}
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
+          </Tooltip>
         </div>
       ),
     },
@@ -373,6 +379,16 @@ export default function Ports() {
               rows={groups}
               rowKey={(group) => group.key}
               loading={loading}
+              rowActions={(group): ContextMenuItem[] => [
+                {
+                  id: "close",
+                  label: t("ports.close"),
+                  icon: <TrashIcon className="h-4 w-4" />,
+                  danger: true,
+                  disabled: !canManage || pendingKey === group.key,
+                  onSelect: () => setPendingDelete(group),
+                },
+              ]}
               minWidth="min-w-120"
               empty={
                 <>

@@ -4,6 +4,7 @@ import { dockerExecCommand } from "../lib/api";
 import { friendlyDockerError } from "../lib/dockerError";
 import type { DockerContainer } from "../types/docker";
 import Select from "./Select";
+import Tooltip from "./Tooltip";
 import { CloseIcon, TerminalIcon, TrashIcon } from "./icons";
 
 type ConsoleDialogProps = {
@@ -126,15 +127,16 @@ export default function ConsoleDialog({ container, onClose }: ConsoleDialogProps
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => setEntries([])}
-              disabled={entries.length === 0}
-              title={t("consoleDialog.clear")}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
+            <Tooltip label={t("consoleDialog.clear")}>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setEntries([])}
+                disabled={entries.length === 0}
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </Tooltip>
             <button
               type="button"
               className="icon-btn"

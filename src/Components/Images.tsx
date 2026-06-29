@@ -4,6 +4,7 @@ import { dockerImagePrune, dockerImageRemove, dockerImages } from "../lib/api";
 import { parseDockerImages, type DockerImage } from "../types/docker";
 import type { DataTableColumn } from "./DataTable";
 import ResourcePage from "./ResourcePage";
+import Tooltip from "./Tooltip";
 import { ImagesIcon, TrashIcon } from "./icons";
 
 function imageName(image: DockerImage): string {
@@ -63,15 +64,16 @@ export default function Images() {
         className: "whitespace-nowrap",
         cell: (img) => (
           <div className="flex items-center justify-end">
-            <button
-              type="button"
-              title={t("images.remove")}
-              className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
-              disabled={pendingKey === img.ID}
-              onClick={() => requestRemove(img)}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
+            <Tooltip label={t("images.remove")}>
+              <button
+                type="button"
+                className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
+                disabled={pendingKey === img.ID}
+                onClick={() => requestRemove(img)}
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </Tooltip>
           </div>
         ),
       },

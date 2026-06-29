@@ -4,6 +4,7 @@ import { dockerVolumePrune, dockerVolumeRemove, dockerVolumes } from "../lib/api
 import { parseDockerVolumes, type DockerVolume } from "../types/docker";
 import type { DataTableColumn } from "./DataTable";
 import ResourcePage from "./ResourcePage";
+import Tooltip from "./Tooltip";
 import { VolumesIcon, TrashIcon } from "./icons";
 
 export default function Volumes() {
@@ -51,15 +52,16 @@ export default function Volumes() {
         className: "whitespace-nowrap",
         cell: (vol) => (
           <div className="flex items-center justify-end">
-            <button
-              type="button"
-              title={t("volumes.remove")}
-              className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
-              disabled={pendingKey === vol.Name}
-              onClick={() => requestRemove(vol)}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
+            <Tooltip label={t("volumes.remove")}>
+              <button
+                type="button"
+                className="icon-btn hover:bg-status-error-soft! hover:text-status-error!"
+                disabled={pendingKey === vol.Name}
+                onClick={() => requestRemove(vol)}
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </Tooltip>
           </div>
         ),
       },
