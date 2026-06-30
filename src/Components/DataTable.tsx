@@ -2,7 +2,7 @@ import { useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../lib/toast";
 import ContextMenu, { type ContextMenuItem } from "./ContextMenu";
-import { ChevronDownIcon, ChevronRightIcon, CopyIcon } from "./icons";
+import { ChevronDownIcon, CopyIcon } from "./icons";
 
 export type DataTableColumn<T> = {
   id: string;
@@ -130,6 +130,32 @@ export default function DataTable<T>({
     </tr>
   );
 
+  const renderCollapsibleRow = (row: T, open: boolean) => (
+    <tr
+      key={rowKey(row)}
+      className="hover:bg-paper-dim transition-colors"
+      onContextMenu={(e) => handleRowContextMenu(e, row)}
+    >
+      {columns.map((col) => (
+        <td
+          key={col.id}
+          className={`p-0 ${open ? "border-b border-anthracite-100" : ""} ${col.className ?? ""}`}
+        >
+          <div
+            className="grid transition-[grid-template-rows] duration-200 ease-out"
+            style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div className={`px-5 py-3 ${col.align === "right" ? "text-right" : ""}`}>
+                {col.cell(row)}
+              </div>
+            </div>
+          </div>
+        </td>
+      ))}
+    </tr>
+  );
+
   return (
     <div className="card shrink-0 overflow-hidden">
       <div className="overflow-x-auto">
@@ -148,7 +174,7 @@ export default function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-anthracite-100">
+          <tbody className={grouped ? "" : "divide-y divide-anthracite-100"}>
             {showSkeleton
               ? Array.from({ length: SKELETON_ROWS }).map((_, rowIndex) => (
                   <tr key={`skeleton-${rowIndex}`}>
@@ -168,22 +194,25 @@ export default function DataTable<T>({
                 ))
               : grouped
                 ? groups!.map((group) => {
-                    const isCollapsed = collapsed.has(group.id);
+                    const open = !collapsed.has(group.id);
                     return [
-                      <tr key={`group-${group.id}`} className="bg-anthracite-50/70">
+                      <tr
+                        key={`group-${group.id}`}
+                        className="border-t border-anthracite-100 bg-anthracite-50/70"
+                      >
                         <td colSpan={columns.length} className="px-3 py-2">
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               className="icon-btn shrink-0"
-                              aria-expanded={!isCollapsed}
+                              aria-expanded={open}
                               onClick={() => toggleGroup(group.id)}
                             >
-                              {isCollapsed ? (
-                                <ChevronRightIcon className="h-4 w-4" />
-                              ) : (
-                                <ChevronDownIcon className="h-4 w-4" />
-                              )}
+                              <ChevronDownIcon
+                                className={`h-4 w-4 transition-transform duration-200 ${
+                                  open ? "" : "-rotate-90"
+                                }`}
+                              />
                             </button>
                             <button
                               type="button"
@@ -200,7 +229,7 @@ export default function DataTable<T>({
                           </div>
                         </td>
                       </tr>,
-                      ...(isCollapsed ? [] : group.rows.map((row) => renderRow(row))),
+                      ...group.rows.map((row) => renderCollapsibleRow(row, open)),
                     ];
                   })
                 : rows.map((row) => renderRow(row))}

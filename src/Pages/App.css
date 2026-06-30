@@ -41,18 +41,23 @@
   body {
     @apply bg-paper text-anthracite-900;
 
-    /* Sélection de texte désactivée par défaut (application de bureau). */
     user-select: none;
     -webkit-user-select: none;
   }
 
-  /* Seuls les tableaux et les champs de saisie restent sélectionnables. */
   table,
   input,
   textarea,
   [contenteditable="true"] {
     user-select: text;
     -webkit-user-select: text;
+  }
+
+  img,
+  svg {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
   }
 
   @supports not selector(::-webkit-scrollbar) {
@@ -62,7 +67,6 @@
     }
   }
 
-  /* Scrollbars custom (WebKit / Chromium, moteur de Tauri) */
   *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -132,7 +136,6 @@
     }
   }
 
-  /* Poignées de redimensionnement de la fenêtre sans décorations (Linux). */
   .rh {
     position: fixed;
     z-index: 60;

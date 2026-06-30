@@ -19,11 +19,15 @@
       justify-content: center;
       gap: 20px;
       background-color: #faf9f6;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .app-boot__logo {
       width: 60px;
       height: 60px;
       animation: app-boot-pulse 1.4s ease-in-out infinite;
+      -webkit-user-drag: none;
+      pointer-events: none;
     }
     .app-boot__spinner {
       width: 26px;
