@@ -6,6 +6,7 @@ import type { DockerContainer } from "../types/docker";
 import Select from "./Select";
 import ServerConsole from "./ServerConsole";
 import Tooltip from "./Tooltip";
+import Ansi from "../lib/ansi";
 import { CloseIcon, TerminalIcon, TrashIcon } from "./icons";
 
 type ConsoleDialogProps = {
@@ -263,7 +264,7 @@ export default function ConsoleDialog({ container, onClose }: ConsoleDialogProps
         <>
         <div
           ref={scrollRef}
-          className="min-h-0 flex-1 overflow-auto bg-anthracite-950 px-4 py-3 font-mono text-xs leading-relaxed"
+          className="min-h-0 flex-1 select-text overflow-auto bg-anthracite-950 px-4 py-3 font-mono text-xs leading-relaxed"
           onClick={() => inputRef.current?.focus()}
         >
           {entries.length === 0 && !running && !sessionError ? (
@@ -278,10 +279,14 @@ export default function ConsoleDialog({ container, onClose }: ConsoleDialogProps
                   <span className="text-paper/90">{e.command}</span>
                 </div>
                 {e.stdout && (
-                  <div className="whitespace-pre-wrap break-all text-paper/80">{e.stdout}</div>
+                  <div className="whitespace-pre-wrap break-all text-paper/80">
+                    <Ansi text={e.stdout} />
+                  </div>
                 )}
                 {e.stderr && (
-                  <div className="whitespace-pre-wrap break-all text-status-error">{e.stderr}</div>
+                  <div className="whitespace-pre-wrap break-all text-status-error">
+                    <Ansi text={e.stderr} />
+                  </div>
                 )}
                 {e.code !== 0 && (
                   <div className="select-none text-[11px] text-paper/30">

@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { attachClose, attachOpen, attachWrite, type AttachOutput } from "../lib/api";
 import { friendlyDockerError } from "../lib/dockerError";
 import type { DockerContainer } from "../types/docker";
+import Ansi from "../lib/ansi";
 
 type Status = "connecting" | "open" | "closed" | "error";
 
@@ -14,13 +15,13 @@ function clampBuffer(text: string): string {
 }
 
 const ESC = String.fromCharCode(27);
-const CSI = new RegExp(`${ESC}\\[[0-9;?]*[ -/]*[@-~]`, "g");
+const CSI_NON_SGR = new RegExp(`${ESC}\\[[0-9;?]*[ -/]*[@-ln-~]`, "g");
 const OSC = new RegExp(`${ESC}[\\]P^_X][^\\u0007]*?(?:\\u0007|${ESC}\\\\)`, "g");
 const ESC_SINGLE = new RegExp(`${ESC}[@-Z\\\\-_]`, "g");
 
 function sanitize(text: string): string {
   return text
-    .replace(CSI, "")
+    .replace(CSI_NON_SGR, "")
     .replace(OSC, "")
     .replace(ESC_SINGLE, "")
     .replace(/\r\n/g, "\n")
@@ -151,7 +152,7 @@ export default function ServerConsole({ container }: { container: DockerContaine
     <>
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-auto bg-anthracite-950 px-4 py-3 font-mono text-xs leading-relaxed"
+        className="min-h-0 flex-1 select-text overflow-auto bg-anthracite-950 px-4 py-3 font-mono text-xs leading-relaxed"
         onClick={() => inputRef.current?.focus()}
       >
         {status === "error" ? (
@@ -161,7 +162,9 @@ export default function ServerConsole({ container }: { container: DockerContaine
         ) : output === "" && status === "connecting" ? (
           <p className="text-paper/40">{t("serverConsole.connecting")}</p>
         ) : (
-          <pre className="whitespace-pre-wrap break-all text-paper/85">{output}</pre>
+          <pre className="whitespace-pre-wrap break-all text-paper/85">
+            <Ansi text={output} />
+          </pre>
         )}
         {status === "closed" && (
           <p className="mt-1 select-none text-[11px] text-paper/40">{t("serverConsole.closed")}</p>

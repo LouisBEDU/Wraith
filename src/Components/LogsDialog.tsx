@@ -4,6 +4,7 @@ import { dockerLogs } from "../lib/api";
 import { friendlyDockerError } from "../lib/dockerError";
 import type { DockerContainer } from "../types/docker";
 import Tooltip from "./Tooltip";
+import Ansi, { stripAnsi } from "../lib/ansi";
 import { CheckCircleIcon, CloseIcon, CopyIcon, RefreshIcon, TerminalIcon } from "./icons";
 
 type LogsDialogProps = {
@@ -52,7 +53,7 @@ function parseLines(raw: string): ParsedLine[] {
       const match = line.match(TIMESTAMP_LINE);
       const time = match ? formatTimestamp(match[1]) : null;
       const text = match && time !== null ? match[2] : line;
-      return { key: index, time, text, tone: classifyTone(text) };
+      return { key: index, time, text, tone: classifyTone(stripAnsi(text)) };
     });
 }
 
@@ -151,7 +152,7 @@ export default function LogsDialog({ container, onClose }: LogsDialogProps) {
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(logs);
+      await navigator.clipboard.writeText(stripAnsi(logs));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -223,7 +224,7 @@ export default function LogsDialog({ container, onClose }: LogsDialogProps) {
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="h-full overflow-auto bg-anthracite-950 px-4 py-3 font-mono text-xs leading-relaxed"
+            className="h-full select-text overflow-auto bg-anthracite-950 px-4 py-3 font-mono text-xs leading-relaxed"
           >
             {error ? (
               <p className="text-status-error">{error}</p>
@@ -237,7 +238,9 @@ export default function LogsDialog({ container, onClose }: LogsDialogProps) {
                   {line.time && (
                     <span className="shrink-0 select-none text-paper/30">{line.time}</span>
                   )}
-                  <span className={TONE_CLASS[line.tone]}>{line.text}</span>
+                  <span className={TONE_CLASS[line.tone]}>
+                    <Ansi text={line.text} />
+                  </span>
                 </div>
               ))
             )}
