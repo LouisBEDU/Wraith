@@ -6,6 +6,23 @@ export interface DockerContainer {
   State: string;
   Status: string;
   RunningFor: string;
+  Labels?: string;
+}
+
+const COMPOSE_PROJECT_LABEL = "com.docker.compose.project";
+
+export function composeProject(container: DockerContainer): string | null {
+  const labels = container.Labels;
+  if (!labels) return null;
+  for (const pair of labels.split(",")) {
+    const eq = pair.indexOf("=");
+    if (eq === -1) continue;
+    if (pair.slice(0, eq).trim() === COMPOSE_PROJECT_LABEL) {
+      const value = pair.slice(eq + 1).trim();
+      return value || null;
+    }
+  }
+  return null;
 }
 
 function parseNdjson<T>(raw: string): T[] {

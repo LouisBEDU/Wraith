@@ -1,11 +1,13 @@
+import { useMemo, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { DockerContainer } from "../types/docker";
+import { composeProject, type DockerContainer } from "../types/docker";
 import StatusBadge from "./StatusBadge";
-import DataTable, { type DataTableColumn } from "./DataTable";
+import DataTable, { type DataTableColumn, type DataTableGroup } from "./DataTable";
 import type { ContextMenuItem } from "./ContextMenu";
 import Tooltip from "./Tooltip";
 import {
   ContainersIcon,
+  LayersIcon,
   LogsIcon,
   PlayIcon,
   RestartIcon,
@@ -15,12 +17,17 @@ import {
 } from "./icons";
 
 export type ContainerAction = "start" | "stop" | "restart" | "remove";
+export type StackAction = "start" | "stop" | "restart";
+
+const STANDALONE_GROUP = "__standalone__";
 
 type ContainersTableProps = {
   containers: DockerContainer[];
   pendingId: string | null;
+  pendingStack?: string | null;
   loading?: boolean;
   onAction: (container: DockerContainer, action: ContainerAction) => void;
+  onStackAction?: (project: string, containers: DockerContainer[], action: StackAction) => void;
   onShowLogs: (container: DockerContainer) => void;
   onOpenConsole: (container: DockerContainer) => void;
 };
@@ -28,8 +35,10 @@ type ContainersTableProps = {
 export default function ContainersTable({
   containers,
   pendingId,
+  pendingStack = null,
   loading = false,
   onAction,
+  onStackAction,
   onShowLogs,
   onOpenConsole,
 }: ContainersTableProps) {
@@ -192,6 +201,102 @@ export default function ContainersTable({
     ];
   };
 
+  const stackTitle = (label: ReactNode, total: number, running: number, standalone = false) => (
+    <div className="flex items-center gap-2 text-anthracite-900">
+      {standalone ? (
+        <ContainersIcon className="h-4 w-4 text-anthracite-400" />
+      ) : (
+        <LayersIcon className="h-4 w-4 text-anthracite-400" />
+      )}
+      <span className="truncate text-sm font-medium">{label}</span>
+      <span className="rounded-full bg-anthracite-100 px-2 py-0.5 text-xs font-medium text-anthracite-500">
+        {t("compose.count", { running, total })}
+      </span>
+    </div>
+  );
+
+  const stackActions = (project: string, group: DockerContainer[]) => {
+    if (!onStackAction) return undefined;
+    const isPending = pendingStack === project;
+    const running = group.filter((c) => c.State === "running").length;
+    const allRunning = running === group.length;
+    const stop = (e: MouseEvent) => e.stopPropagation();
+    return (
+      <div className="flex items-center gap-1" onClick={stop}>
+        <Tooltip label={t("compose.startAll")}>
+          <button
+            type="button"
+            className="icon-btn"
+            disabled={isPending || allRunning}
+            onClick={() => onStackAction(project, group, "start")}
+          >
+            <PlayIcon className="h-4 w-4" />
+          </button>
+        </Tooltip>
+        <Tooltip label={t("compose.stopAll")}>
+          <button
+            type="button"
+            className="icon-btn"
+            disabled={isPending || running === 0}
+            onClick={() => onStackAction(project, group, "stop")}
+          >
+            <StopIcon className="h-4 w-4" />
+          </button>
+        </Tooltip>
+        <Tooltip label={t("compose.restartAll")}>
+          <button
+            type="button"
+            className="icon-btn"
+            disabled={isPending || running === 0}
+            onClick={() => onStackAction(project, group, "restart")}
+          >
+            <RestartIcon className="h-4 w-4" />
+          </button>
+        </Tooltip>
+      </div>
+    );
+  };
+
+  const groups = useMemo<DataTableGroup<DockerContainer>[] | undefined>(() => {
+    const byProject = new Map<string, DockerContainer[]>();
+    for (const c of containers) {
+      const project = composeProject(c) ?? STANDALONE_GROUP;
+      const existing = byProject.get(project);
+      if (existing) existing.push(c);
+      else byProject.set(project, [c]);
+    }
+
+    const stackNames = [...byProject.keys()]
+      .filter((name) => name !== STANDALONE_GROUP)
+      .sort((a, b) => a.localeCompare(b));
+
+    // Aucune stack Compose détectée → on garde la liste plate classique.
+    if (stackNames.length === 0) return undefined;
+
+    const result: DataTableGroup<DockerContainer>[] = stackNames.map((name) => {
+      const group = byProject.get(name)!;
+      const running = group.filter((c) => c.State === "running").length;
+      return {
+        id: `stack:${name}`,
+        title: stackTitle(name, group.length, running),
+        actions: stackActions(name, group),
+        rows: group,
+      };
+    });
+
+    const standalone = byProject.get(STANDALONE_GROUP);
+    if (standalone && standalone.length > 0) {
+      const running = standalone.filter((c) => c.State === "running").length;
+      result.push({
+        id: STANDALONE_GROUP,
+        title: stackTitle(t("compose.standalone"), standalone.length, running, true),
+        rows: standalone,
+      });
+    }
+
+    return result;
+  }, [containers, pendingStack, onStackAction, t]);
+
   return (
     <DataTable
       columns={columns}
@@ -199,6 +304,7 @@ export default function ContainersTable({
       rowKey={(c) => c.ID}
       loading={loading}
       rowActions={rowActions}
+      groups={groups}
       minWidth="min-w-160"
       empty={
         <>

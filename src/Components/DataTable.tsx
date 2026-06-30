@@ -2,7 +2,7 @@ import { useState, type MouseEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../lib/toast";
 import ContextMenu, { type ContextMenuItem } from "./ContextMenu";
-import { CopyIcon } from "./icons";
+import { ChevronDownIcon, ChevronRightIcon, CopyIcon } from "./icons";
 
 export type DataTableColumn<T> = {
   id: string;
@@ -12,16 +12,22 @@ export type DataTableColumn<T> = {
   align?: "left" | "right";
 };
 
+export type DataTableGroup<T> = {
+  id: string;
+  title: ReactNode;
+  actions?: ReactNode;
+  rows: T[];
+};
+
 type DataTableProps<T> = {
   columns: DataTableColumn<T>[];
   rows: T[];
   rowKey: (row: T) => string;
   empty: ReactNode;
   minWidth?: string;
-  /** Affiche un squelette de chargement tant qu'aucune donnée n'est encore disponible. */
   loading?: boolean;
-  /** Actions métier proposées dans le menu contextuel (clic droit) d'une ligne. */
   rowActions?: (row: T) => ContextMenuItem[];
+  groups?: DataTableGroup<T>[];
 };
 
 const SKELETON_ROWS = 5;
@@ -36,10 +42,12 @@ export default function DataTable<T>({
   minWidth = "min-w-0",
   loading = false,
   rowActions,
+  groups,
 }: DataTableProps<T>) {
   const { t } = useTranslation();
   const toast = useToast();
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
 
   async function copy(text: string) {
     try {
@@ -91,8 +99,36 @@ export default function DataTable<T>({
     );
   }
 
-  // Premier chargement (pas encore de données en cache) → squelette.
   const showSkeleton = rows.length === 0 && loading;
+  const grouped = !showSkeleton && groups !== undefined && groups.length > 0;
+
+  function toggleGroup(id: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const renderRow = (row: T) => (
+    <tr
+      key={rowKey(row)}
+      className="hover:bg-paper-dim transition-colors"
+      onContextMenu={(e) => handleRowContextMenu(e, row)}
+    >
+      {columns.map((col) => (
+        <td
+          key={col.id}
+          className={`px-5 py-3 ${col.align === "right" ? "text-right" : ""} ${
+            col.className ?? ""
+          }`}
+        >
+          {col.cell(row)}
+        </td>
+      ))}
+    </tr>
+  );
 
   return (
     <div className="card shrink-0 overflow-hidden">
@@ -130,24 +166,44 @@ export default function DataTable<T>({
                     ))}
                   </tr>
                 ))
-              : rows.map((row) => (
-                  <tr
-                    key={rowKey(row)}
-                    className="hover:bg-paper-dim transition-colors"
-                    onContextMenu={(e) => handleRowContextMenu(e, row)}
-                  >
-                    {columns.map((col) => (
-                      <td
-                        key={col.id}
-                        className={`px-5 py-3 ${col.align === "right" ? "text-right" : ""} ${
-                          col.className ?? ""
-                        }`}
-                      >
-                        {col.cell(row)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
+              : grouped
+                ? groups!.map((group) => {
+                    const isCollapsed = collapsed.has(group.id);
+                    return [
+                      <tr key={`group-${group.id}`} className="bg-anthracite-50/70">
+                        <td colSpan={columns.length} className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="icon-btn shrink-0"
+                              aria-expanded={!isCollapsed}
+                              onClick={() => toggleGroup(group.id)}
+                            >
+                              {isCollapsed ? (
+                                <ChevronRightIcon className="h-4 w-4" />
+                              ) : (
+                                <ChevronDownIcon className="h-4 w-4" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className="min-w-0 flex-1 text-left"
+                              onClick={() => toggleGroup(group.id)}
+                            >
+                              {group.title}
+                            </button>
+                            {group.actions && (
+                              <div className="flex shrink-0 items-center gap-1">
+                                {group.actions}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>,
+                      ...(isCollapsed ? [] : group.rows.map((row) => renderRow(row))),
+                    ];
+                  })
+                : rows.map((row) => renderRow(row))}
           </tbody>
         </table>
       </div>

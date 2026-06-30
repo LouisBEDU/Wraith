@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { dockerAction, dockerPs } from "../lib/api";
 import { parseDockerPs, type DockerContainer } from "../types/docker";
 import StatsCards from "./StatsCards";
-import ContainersTable, { type ContainerAction } from "./ContainersTable";
+import ContainersTable, { type ContainerAction, type StackAction } from "./ContainersTable";
 import ConfirmDialog from "./ConfirmDialog";
 import LogsDialog from "./LogsDialog";
 import ConsoleDialog from "./ConsoleDialog";
@@ -19,6 +19,12 @@ const ACTION_TOAST_KEY: Record<ContainerAction, string> = {
   remove: "content.toastRemove",
 };
 
+const STACK_TOAST_KEY: Record<StackAction, string> = {
+  start: "compose.toastStartAll",
+  stop: "compose.toastStopAll",
+  restart: "compose.toastRestartAll",
+};
+
 export default function Content() {
   const { t } = useTranslation();
   const toast = useToast();
@@ -26,6 +32,7 @@ export default function Content() {
   const { data, loading, error, reload } = useResource<DockerContainer>("containers", loadContainers);
   const containers = data ?? [];
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingStack, setPendingStack] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<DockerContainer | null>(null);
   const [logsContainer, setLogsContainer] = useState<DockerContainer | null>(null);
   const [consoleContainer, setConsoleContainer] = useState<DockerContainer | null>(null);
@@ -53,6 +60,29 @@ export default function Content() {
       toast.error(friendlyDockerError(err, t));
     } finally {
       setPendingId(null);
+    }
+  }
+
+  async function handleStackAction(
+    project: string,
+    stackContainers: DockerContainer[],
+    action: StackAction,
+  ) {
+    const targets = stackContainers.filter((c) =>
+      action === "start" ? c.State !== "running" : c.State === "running",
+    );
+    if (targets.length === 0) return;
+    setPendingStack(project);
+    try {
+      for (const container of targets) {
+        await dockerAction(action, container.ID);
+      }
+      await reload();
+      toast.success(t(STACK_TOAST_KEY[action], { name: project }));
+    } catch (err) {
+      toast.error(friendlyDockerError(err, t));
+    } finally {
+      setPendingStack(null);
     }
   }
 
@@ -95,8 +125,10 @@ export default function Content() {
       <ContainersTable
         containers={containers}
         pendingId={pendingId}
+        pendingStack={pendingStack}
         loading={loading}
         onAction={handleAction}
+        onStackAction={handleStackAction}
         onShowLogs={setLogsContainer}
         onOpenConsole={setConsoleContainer}
       />

@@ -101,6 +101,16 @@
     "resourceInUse": "Élément encore utilisé par un conteneur. Arrêtez et supprimez le(s) conteneur(s) qui l'utilisent, puis réessayez.",
     "generic": "Une erreur Docker est survenue."
   },
+  "compose": {
+    "standalone": "Sans stack",
+    "count": "{{running}}/{{total}} en cours",
+    "startAll": "Tout démarrer",
+    "stopAll": "Tout arrêter",
+    "restartAll": "Tout redémarrer",
+    "toastStartAll": "Stack « {{name}} » démarrée.",
+    "toastStopAll": "Stack « {{name}} » arrêtée.",
+    "toastRestartAll": "Stack « {{name}} » redémarrée."
+  },
   "table": {
     "empty": "Aucun conteneur chargé. Cliquez sur « Actualiser ».",
     "name": "Nom",
